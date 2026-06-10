@@ -1,0 +1,149 @@
+2026-06-10 11:20:25,887 | INFO | __main__ | ============================================================
+2026-06-10 11:20:25,887 | INFO | __main__ | BASELINE TRAINING RUN
+2026-06-10 11:20:25,887 | INFO | __main__ | Config: {'num_layers': 3, 'width_mult': 1.0, 'quant_bits': 32, 'time_slice': 20.0, 'priority': 1, 'dvfs_factor': 1.0}
+2026-06-10 11:20:25,887 | INFO | __main__ | ============================================================
+2026-06-10 11:21:18,280 | INFO | __main__ | DataLoaders ready — train: 50000, test:10000
+2026-06-10 11:21:18,300 | INFO | src.model | Built model: layers=3,width=1.00
+2026-06-10 11:21:18,323 | INFO | src.model | Model stats: {'total_params': 111274, 'model_size_kb': 434.66, 'flops': 10340170}
+2026-06-10 11:21:18,323 | INFO | __main__ | Training | config={'num_layers': 3, 'width_mult': 1.0, 'quant_bits': 32, 'time_slice': 20.0, 'priority': 1, 'dvfs_factor': 1.0} | stats={'total_params': 111274, 'model_size_kb': 434.66, 'flops': 10340170} | device=cpu
+2026-06-10 11:22:08,474 | INFO | __main__ | Epoch [20/20] loss=1.5806 | train=0.4210 | test=0.4495 | 50.2s
+2026-06-10 11:22:08,495 | INFO | __main__ | Checkpoint → /Users/rrsd/bayesian-optimization-microprocessor/checkpoints/baseline_model.pth (acc=0.4495)
+2026-06-10 11:22:08,495 | INFO | __main__ | Training complete. Best test accuracy: 0.4495
+2026-06-10 11:22:08,499 | INFO | src.model | Model stats: {'total_params': 111274, 'model_size_kb': 434.66, 'flops': 10340170}
+2026-06-10 11:22:08,499 | INFO | __main__ | Baseline measurements → /Users/rrsd/bayesian-optimization-microprocessor/results/baseline_measurements.csv
+2026-06-10 11:22:08,500 | INFO | __main__ | Final: accuracy=0.4495, size=434.66KB,FLOPs=10,340,170
+2026-06-10 11:37:04,186 | INFO | __main__ | ============================================================
+2026-06-10 11:37:04,186 | INFO | __main__ | BASELINE TRAINING RUN
+2026-06-10 11:37:04,186 | INFO | __main__ | Config: {'num_layers': 3, 'width_mult': 1.0, 'quant_bits': 32, 'time_slice': 20.0, 'priority': 1, 'dvfs_factor': 1.0}
+2026-06-10 11:37:04,186 | INFO | __main__ | ============================================================
+2026-06-10 11:37:05,048 | INFO | __main__ | DataLoaders ready — train: 50000, test:10000
+2026-06-10 11:37:05,052 | INFO | src.model | Built model: layers=3,width=1.00
+2026-06-10 11:37:05,105 | INFO | src.model | Model stats: {'total_params': 111274, 'model_size_kb': 434.66, 'flops': 10340170}
+2026-06-10 11:37:05,105 | INFO | __main__ | Training | config={'num_layers': 3, 'width_mult': 1.0, 'quant_bits': 32, 'time_slice': 20.0, 'priority': 1, 'dvfs_factor': 1.0} | stats={'total_params': 111274, 'model_size_kb': 434.66, 'flops': 10340170} | device=mps
+2026-06-10 11:45:49,997 | INFO | __main__ | ============================================================
+2026-06-10 11:45:49,997 | INFO | __main__ | BASELINE TRAINING RUN
+2026-06-10 11:45:49,997 | INFO | __main__ | Config: {'num_layers': 3, 'width_mult': 1.0, 'quant_bits': 32, 'time_slice': 20.0, 'priority': 1, 'dvfs_factor': 1.0}
+2026-06-10 11:45:49,997 | INFO | __main__ | ============================================================
+2026-06-10 11:45:50,836 | INFO | __main__ | DataLoaders ready — train: 50000, test:10000
+2026-06-10 11:50:20,391 | INFO | __main__ | ============================================================
+2026-06-10 11:50:20,392 | INFO | __main__ | BASELINE TRAINING RUN
+2026-06-10 11:50:20,392 | INFO | __main__ | Config: {'num_layers': 3, 'width_mult': 1.0, 'quant_bits': 32, 'time_slice': 20.0, 'priority': 1, 'dvfs_factor': 1.0}
+2026-06-10 11:50:20,392 | INFO | __main__ | ============================================================
+2026-06-10 11:50:21,244 | INFO | __main__ | DataLoaders ready — train: 50000, test:10000
+2026-06-10 11:50:21,248 | INFO | src.model | Built model: layers=3,width=1.00
+2026-06-10 11:50:21,273 | INFO | src.model | Model stats: {'total_params': 111274, 'model_size_kb': 434.66, 'flops': 10340170}
+2026-06-10 11:50:21,273 | INFO | __main__ | Training | config={'num_layers': 3, 'width_mult': 1.0, 'quant_bits': 32, 'time_slice': 20.0, 'priority': 1, 'dvfs_factor': 1.0} | stats={'total_params': 111274, 'model_size_kb': 434.66, 'flops': 10340170} | device=mps
+2026-06-10 12:00:58,915 | INFO | __main__ | ============================================================
+2026-06-10 12:00:58,915 | INFO | __main__ | BASELINE TRAINING RUN
+2026-06-10 12:00:58,915 | INFO | __main__ | Config: {'num_layers': 3, 'width_mult': 1.0, 'quant_bits': 32, 'time_slice': 20.0, 'priority': 1, 'dvfs_factor': 1.0}
+2026-06-10 12:00:58,915 | INFO | __main__ | ============================================================
+2026-06-10 12:00:59,766 | INFO | __main__ | DataLoaders ready — train: 50000, test:10000
+2026-06-10 12:00:59,768 | INFO | src.model | Built model: layers=3,width=1.00
+2026-06-10 12:00:59,787 | INFO | __main__ | Training | config={'num_layers': 3, 'width_mult': 1.0, 'quant_bits': 32, 'time_slice': 20.0, 'priority': 1, 'dvfs_factor': 1.0} | stats={'total_params': 0, 'model_size_kb': 0, 'flops': 0} | device=mps
+2026-06-10 12:01:33,942 | INFO | __main__ | Epoch [20/20] loss=1.5720 | train=0.4275 | test=0.5003 | 34.2s
+2026-06-10 12:01:33,981 | INFO | __main__ | Checkpoint → /Users/rrsd/bayesian-optimization-microprocessor/checkpoints/baseline_model.pth (acc=0.5003)
+2026-06-10 12:01:33,981 | INFO | __main__ | Training complete. Best test accuracy: 0.5003
+2026-06-10 12:01:33,997 | INFO | src.model | Model stats: {'total_params': 111274, 'model_size_kb': 434.66, 'flops': 10340170}
+2026-06-10 12:01:33,998 | INFO | __main__ | Baseline measurements → /Users/rrsd/bayesian-optimization-microprocessor/results/baseline_measurements.csv
+2026-06-10 12:01:33,998 | INFO | __main__ | Final: accuracy=0.5003, size=434.66KB,FLOPs=10,340,170
+2026-06-10 12:05:15,746 | INFO | __main__ | ============================================================
+2026-06-10 12:05:15,746 | INFO | __main__ | BASELINE TRAINING RUN
+2026-06-10 12:05:15,746 | INFO | __main__ | Config: {'num_layers': 3, 'width_mult': 1.0, 'quant_bits': 32, 'time_slice': 20.0, 'priority': 1, 'dvfs_factor': 1.0}
+2026-06-10 12:05:15,746 | INFO | __main__ | ============================================================
+2026-06-10 12:05:16,612 | INFO | __main__ | DataLoaders ready — train: 50000, test:10000
+2026-06-10 12:05:16,614 | INFO | src.model | Built model: layers=3,width=1.00
+2026-06-10 12:05:16,635 | INFO | __main__ | Training | config={'num_layers': 3, 'width_mult': 1.0, 'quant_bits': 32, 'time_slice': 20.0, 'priority': 1, 'dvfs_factor': 1.0} | stats={'total_params': 0, 'model_size_kb': 0, 'flops': 0} | device=mps
+2026-06-10 12:05:46,437 | INFO | __main__ | Epoch [50/50] loss=1.5720 | train=0.4275 | test=0.5003 | 29.8s
+2026-06-10 12:05:46,473 | INFO | __main__ | Checkpoint → /Users/rrsd/bayesian-optimization-microprocessor/checkpoints/baseline_model.pth (acc=0.5003)
+2026-06-10 12:05:46,473 | INFO | __main__ | Training complete. Best test accuracy: 0.5003
+2026-06-10 12:05:46,496 | INFO | src.model | Model stats: {'total_params': 111274, 'model_size_kb': 434.66, 'flops': 10340170}
+2026-06-10 12:05:46,497 | INFO | __main__ | Baseline measurements → /Users/rrsd/bayesian-optimization-microprocessor/results/baseline_measurements.csv
+2026-06-10 12:05:46,497 | INFO | __main__ | Final: accuracy=0.5003, size=434.66KB,FLOPs=10,340,170
+2026-06-10 12:17:08,073 | INFO | __main__ | ============================================================
+2026-06-10 12:17:08,073 | INFO | __main__ | BASELINE TRAINING RUN
+2026-06-10 12:17:08,073 | INFO | __main__ | Config: {'num_layers': 3, 'width_mult': 1.0, 'quant_bits': 32, 'time_slice': 20.0, 'priority': 1, 'dvfs_factor': 1.0}
+2026-06-10 12:17:08,073 | INFO | __main__ | ============================================================
+2026-06-10 12:17:08,924 | INFO | __main__ | DataLoaders ready — train: 50000, test:10000
+2026-06-10 12:17:08,926 | INFO | src.model | Built model: layers=3,width=1.00
+2026-06-10 12:17:08,946 | INFO | __main__ | Training | config={'num_layers': 3, 'width_mult': 1.0, 'quant_bits': 32, 'time_slice': 20.0, 'priority': 1, 'dvfs_factor': 1.0} | stats={'total_params': 0, 'model_size_kb': 0, 'flops': 0} | device=mps
+2026-06-10 12:17:38,878 | INFO | __main__ | Epoch [01/50] loss=1.5720 | train=0.4275 | test=0.5003 | 29.9s
+2026-06-10 12:17:38,915 | INFO | __main__ | Checkpoint → /Users/rrsd/bayesian-optimization-microprocessor/checkpoints/baseline_model.pth (acc=0.5003)
+2026-06-10 12:18:08,083 | INFO | __main__ | Epoch [02/50] loss=1.2583 | train=0.5550 | test=0.5872 | 29.2s
+2026-06-10 12:18:08,121 | INFO | __main__ | Checkpoint → /Users/rrsd/bayesian-optimization-microprocessor/checkpoints/baseline_model.pth (acc=0.5872)
+2026-06-10 12:18:37,983 | INFO | __main__ | Epoch [03/50] loss=1.1360 | train=0.6064 | test=0.6000 | 29.9s
+2026-06-10 12:18:38,017 | INFO | __main__ | Checkpoint → /Users/rrsd/bayesian-optimization-microprocessor/checkpoints/baseline_model.pth (acc=0.6000)
+2026-06-10 12:19:07,411 | INFO | __main__ | Epoch [04/50] loss=1.0621 | train=0.6353 | test=0.6396 | 29.4s
+2026-06-10 12:19:07,449 | INFO | __main__ | Checkpoint → /Users/rrsd/bayesian-optimization-microprocessor/checkpoints/baseline_model.pth (acc=0.6396)
+2026-06-10 12:19:36,988 | INFO | __main__ | Epoch [05/50] loss=1.0106 | train=0.6517 | test=0.6205 | 29.5s
+2026-06-10 12:20:06,375 | INFO | __main__ | Epoch [06/50] loss=0.9604 | train=0.6672 | test=0.6569 | 29.4s
+2026-06-10 12:20:06,406 | INFO | __main__ | Checkpoint → /Users/rrsd/bayesian-optimization-microprocessor/checkpoints/baseline_model.pth (acc=0.6569)
+2026-06-10 12:20:35,800 | INFO | __main__ | Epoch [07/50] loss=0.9206 | train=0.6865 | test=0.6774 | 29.4s
+2026-06-10 12:20:35,842 | INFO | __main__ | Checkpoint → /Users/rrsd/bayesian-optimization-microprocessor/checkpoints/baseline_model.pth (acc=0.6774)
+2026-06-10 12:21:05,134 | INFO | __main__ | Epoch [08/50] loss=0.8901 | train=0.6960 | test=0.6939 | 29.3s
+2026-06-10 12:21:05,164 | INFO | __main__ | Checkpoint → /Users/rrsd/bayesian-optimization-microprocessor/checkpoints/baseline_model.pth (acc=0.6939)
+2026-06-10 12:21:35,461 | INFO | __main__ | Epoch [09/50] loss=0.8578 | train=0.7084 | test=0.6772 | 30.3s
+2026-06-10 12:22:04,918 | INFO | __main__ | Epoch [10/50] loss=0.8334 | train=0.7183 | test=0.6867 | 29.5s
+2026-06-10 12:22:34,347 | INFO | __main__ | Epoch [11/50] loss=0.8136 | train=0.7261 | test=0.7200 | 29.4s
+2026-06-10 12:22:34,378 | INFO | __main__ | Checkpoint → /Users/rrsd/bayesian-optimization-microprocessor/checkpoints/baseline_model.pth (acc=0.7200)
+2026-06-10 12:23:03,795 | INFO | __main__ | Epoch [12/50] loss=0.7877 | train=0.7339 | test=0.7262 | 29.4s
+2026-06-10 12:23:03,825 | INFO | __main__ | Checkpoint → /Users/rrsd/bayesian-optimization-microprocessor/checkpoints/baseline_model.pth (acc=0.7262)
+2026-06-10 12:23:33,247 | INFO | __main__ | Epoch [13/50] loss=0.7744 | train=0.7409 | test=0.7264 | 29.4s
+2026-06-10 12:23:33,280 | INFO | __main__ | Checkpoint → /Users/rrsd/bayesian-optimization-microprocessor/checkpoints/baseline_model.pth (acc=0.7264)
+2026-06-10 12:24:02,705 | INFO | __main__ | Epoch [14/50] loss=0.7480 | train=0.7504 | test=0.7145 | 29.4s
+2026-06-10 12:24:32,050 | INFO | __main__ | Epoch [15/50] loss=0.7381 | train=0.7574 | test=0.7386 | 29.3s
+2026-06-10 12:24:32,084 | INFO | __main__ | Checkpoint → /Users/rrsd/bayesian-optimization-microprocessor/checkpoints/baseline_model.pth (acc=0.7386)
+2026-06-10 12:25:02,064 | INFO | __main__ | Epoch [16/50] loss=0.7226 | train=0.7586 | test=0.7487 | 30.0s
+2026-06-10 12:25:02,096 | INFO | __main__ | Checkpoint → /Users/rrsd/bayesian-optimization-microprocessor/checkpoints/baseline_model.pth (acc=0.7487)
+2026-06-10 12:25:31,567 | INFO | __main__ | Epoch [17/50] loss=0.7081 | train=0.7644 | test=0.7445 | 29.5s
+2026-06-10 12:26:00,971 | INFO | __main__ | Epoch [18/50] loss=0.6886 | train=0.7694 | test=0.7636 | 29.4s
+2026-06-10 12:26:01,000 | INFO | __main__ | Checkpoint → /Users/rrsd/bayesian-optimization-microprocessor/checkpoints/baseline_model.pth (acc=0.7636)
+2026-06-10 12:26:30,427 | INFO | __main__ | Epoch [19/50] loss=0.6796 | train=0.7748 | test=0.7488 | 29.4s
+2026-06-10 12:27:00,032 | INFO | __main__ | Epoch [20/50] loss=0.6694 | train=0.7794 | test=0.7483 | 29.6s
+2026-06-10 12:27:29,710 | INFO | __main__ | Epoch [21/50] loss=0.6516 | train=0.7829 | test=0.7731 | 29.7s
+2026-06-10 12:27:29,743 | INFO | __main__ | Checkpoint → /Users/rrsd/bayesian-optimization-microprocessor/checkpoints/baseline_model.pth (acc=0.7731)
+2026-06-10 12:27:59,262 | INFO | __main__ | Epoch [22/50] loss=0.6439 | train=0.7879 | test=0.7704 | 29.5s
+2026-06-10 12:28:28,663 | INFO | __main__ | Epoch [23/50] loss=0.6313 | train=0.7909 | test=0.7814 | 29.4s
+2026-06-10 12:28:28,695 | INFO | __main__ | Checkpoint → /Users/rrsd/bayesian-optimization-microprocessor/checkpoints/baseline_model.pth (acc=0.7814)
+2026-06-10 12:28:58,075 | INFO | __main__ | Epoch [24/50] loss=0.6218 | train=0.7930 | test=0.7729 | 29.4s
+2026-06-10 12:29:27,473 | INFO | __main__ | Epoch [25/50] loss=0.6091 | train=0.7971 | test=0.7853 | 29.4s
+2026-06-10 12:29:27,507 | INFO | __main__ | Checkpoint → /Users/rrsd/bayesian-optimization-microprocessor/checkpoints/baseline_model.pth (acc=0.7853)
+2026-06-10 12:29:56,993 | INFO | __main__ | Epoch [26/50] loss=0.6006 | train=0.7998 | test=0.7831 | 29.5s
+2026-06-10 12:30:26,423 | INFO | __main__ | Epoch [27/50] loss=0.5950 | train=0.8042 | test=0.7887 | 29.4s
+2026-06-10 12:30:26,455 | INFO | __main__ | Checkpoint → /Users/rrsd/bayesian-optimization-microprocessor/checkpoints/baseline_model.pth (acc=0.7887)
+2026-06-10 12:30:55,842 | INFO | __main__ | Epoch [28/50] loss=0.5855 | train=0.8059 | test=0.7782 | 29.4s
+2026-06-10 12:31:25,270 | INFO | __main__ | Epoch [29/50] loss=0.5757 | train=0.8090 | test=0.7874 | 29.4s
+2026-06-10 12:31:54,765 | INFO | __main__ | Epoch [30/50] loss=0.5675 | train=0.8111 | test=0.7840 | 29.5s
+2026-06-10 12:32:24,101 | INFO | __main__ | Epoch [31/50] loss=0.5615 | train=0.8133 | test=0.7950 | 29.3s
+2026-06-10 12:32:24,137 | INFO | __main__ | Checkpoint → /Users/rrsd/bayesian-optimization-microprocessor/checkpoints/baseline_model.pth (acc=0.7950)
+2026-06-10 12:32:53,568 | INFO | __main__ | Epoch [32/50] loss=0.5546 | train=0.8136 | test=0.7999 | 29.4s
+2026-06-10 12:32:53,596 | INFO | __main__ | Checkpoint → /Users/rrsd/bayesian-optimization-microprocessor/checkpoints/baseline_model.pth (acc=0.7999)
+2026-06-10 12:33:23,005 | INFO | __main__ | Epoch [33/50] loss=0.5442 | train=0.8170 | test=0.7961 | 29.4s
+2026-06-10 12:33:52,401 | INFO | __main__ | Epoch [34/50] loss=0.5417 | train=0.8183 | test=0.8050 | 29.4s
+2026-06-10 12:33:52,433 | INFO | __main__ | Checkpoint → /Users/rrsd/bayesian-optimization-microprocessor/checkpoints/baseline_model.pth (acc=0.8050)
+2026-06-10 12:34:21,857 | INFO | __main__ | Epoch [35/50] loss=0.5368 | train=0.8183 | test=0.8041 | 29.4s
+2026-06-10 12:34:51,207 | INFO | __main__ | Epoch [36/50] loss=0.5298 | train=0.8209 | test=0.8075 | 29.3s
+2026-06-10 12:34:51,237 | INFO | __main__ | Checkpoint → /Users/rrsd/bayesian-optimization-microprocessor/checkpoints/baseline_model.pth (acc=0.8075)
+2026-06-10 12:35:20,660 | INFO | __main__ | Epoch [37/50] loss=0.5215 | train=0.8232 | test=0.8069 | 29.4s
+2026-06-10 12:35:50,047 | INFO | __main__ | Epoch [38/50] loss=0.5199 | train=0.8233 | test=0.8092 | 29.4s
+2026-06-10 12:35:50,078 | INFO | __main__ | Checkpoint → /Users/rrsd/bayesian-optimization-microprocessor/checkpoints/baseline_model.pth (acc=0.8092)
+2026-06-10 12:36:19,508 | INFO | __main__ | Epoch [39/50] loss=0.5149 | train=0.8257 | test=0.8023 | 29.4s
+2026-06-10 12:36:48,904 | INFO | __main__ | Epoch [40/50] loss=0.5065 | train=0.8265 | test=0.8086 | 29.4s
+2026-06-10 12:37:18,295 | INFO | __main__ | Epoch [41/50] loss=0.5078 | train=0.8280 | test=0.8114 | 29.4s
+2026-06-10 12:37:18,328 | INFO | __main__ | Checkpoint → /Users/rrsd/bayesian-optimization-microprocessor/checkpoints/baseline_model.pth (acc=0.8114)
+2026-06-10 12:37:47,822 | INFO | __main__ | Epoch [42/50] loss=0.5005 | train=0.8295 | test=0.8129 | 29.5s
+2026-06-10 12:37:47,853 | INFO | __main__ | Checkpoint → /Users/rrsd/bayesian-optimization-microprocessor/checkpoints/baseline_model.pth (acc=0.8129)
+2026-06-10 12:38:17,268 | INFO | __main__ | Epoch [43/50] loss=0.4986 | train=0.8267 | test=0.8155 | 29.4s
+2026-06-10 12:38:17,298 | INFO | __main__ | Checkpoint → /Users/rrsd/bayesian-optimization-microprocessor/checkpoints/baseline_model.pth (acc=0.8155)
+2026-06-10 12:38:46,693 | INFO | __main__ | Epoch [44/50] loss=0.4961 | train=0.8303 | test=0.8152 | 29.4s
+2026-06-10 12:39:15,808 | INFO | __main__ | Epoch [45/50] loss=0.4914 | train=0.8317 | test=0.8162 | 29.1s
+2026-06-10 12:39:15,838 | INFO | __main__ | Checkpoint → /Users/rrsd/bayesian-optimization-microprocessor/checkpoints/baseline_model.pth (acc=0.8162)
+2026-06-10 12:39:45,225 | INFO | __main__ | Epoch [46/50] loss=0.4895 | train=0.8303 | test=0.8147 | 29.4s
+2026-06-10 12:40:14,649 | INFO | __main__ | Epoch [47/50] loss=0.4950 | train=0.8285 | test=0.8156 | 29.4s
+2026-06-10 12:40:44,052 | INFO | __main__ | Epoch [48/50] loss=0.4866 | train=0.8335 | test=0.8162 | 29.4s
+2026-06-10 12:41:13,448 | INFO | __main__ | Epoch [49/50] loss=0.4870 | train=0.8310 | test=0.8156 | 29.4s
+2026-06-10 12:41:42,889 | INFO | __main__ | Epoch [50/50] loss=0.4851 | train=0.8351 | test=0.8170 | 29.4s
+2026-06-10 12:41:42,920 | INFO | __main__ | Checkpoint → /Users/rrsd/bayesian-optimization-microprocessor/checkpoints/baseline_model.pth (acc=0.8170)
+2026-06-10 12:41:42,920 | INFO | __main__ | Training complete. Best test accuracy: 0.8170
+2026-06-10 12:41:42,938 | INFO | src.model | Model stats: {'total_params': 111274, 'model_size_kb': 434.66, 'flops': 10340170}
+2026-06-10 12:41:42,939 | INFO | __main__ | Baseline measurements → /Users/rrsd/bayesian-optimization-microprocessor/results/baseline_measurements.csv
+2026-06-10 12:41:42,939 | INFO | __main__ | Final: accuracy=0.8170, size=434.66KB,FLOPs=10,340,170

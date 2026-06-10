@@ -1,0 +1,2 @@
+experiment,num_layers,width_mult,quant_bits,time_slice,priority,dvfs_factor,accuracy,memory_kb,flops,total_params,energy_mj,latency_ms
+baseline_no_optimization,3,1.0,32,20.0,1,1.0,0.817,434.66,10340170,111274,,
