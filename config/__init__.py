@@ -40,7 +40,7 @@ SEARCH_SPACE = {
 SIM_RAM_KB = 512
 SIM_CLOCK_HZ = 120_000_000 # ARM Cortex-M4: 120 MHz
 SIM_VOLTAGE = 3.3 # Volts
-SIM_CAPACITANCE = 1e-9 # Farads
+SIM_CAPACITANCE = 1e-12 # Farads
 SIM_NUM_TASKS = 50
 SIM_ARRIVAL_RATE = 0.2 # Mean inter-arrival (seconds)
 

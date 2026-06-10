@@ -61,6 +61,7 @@ python-dateutil==2.9.0.post0
 scikit-learn==1.8.0
 scipy==1.17.1
 setuptools==81.0.0
+simpy==4.1.2
 six==1.17.0
 stack-data==0.6.3
 sympy==1.14.0
