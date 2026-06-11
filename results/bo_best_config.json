@@ -1,0 +1,13 @@
+{
+  "best_energy_mj": 0.002829,
+  "config": {
+    "num_layers": 2,
+    "width_mult": 0.25,
+    "quant_bits": 4,
+    "time_slice": 50.0,
+    "priority": 2,
+    "dvfs_factor": 0.5
+  },
+  "seed": 42,
+  "n_trials": 30
+}
