@@ -1,0 +1,17 @@
+% Table I: Main Results Comparison
+% Requires: \usepackage{booktabs} in preamble
+\begin{table}[t]
+\centering
+\caption{Performance Comparison of Search Methods (30 Evaluations Each)}
+\label{tab:main_results}
+\begin{tabular}{lcccc}
+\toprule
+Method & Accuracy (\%) $\uparrow$ & Energy (mJ) $\downarrow$ & Memory (KB) $\downarrow$ & Latency (ms) $\downarrow$ \\
+\midrule
+\textbf{Bayesian Opt. (ours)} & \textbf{81.71} & \textbf{0.0028} & \textbf{0.7} & \textbf{5.59} \\
+Random Search [X] & 81.72 & 0.0055 & 2.5 & 10.27 \\
+Grid Search & 81.72 & 0.0028 & 3.8 & 6.76 \\
+\bottomrule
+\multicolumn{5}{l}{\footnotesize Bold = proposed method. Feasibility constraint: accuracy $\geq$ 0.75.} \\
+\end{tabular}
+\end{table}
