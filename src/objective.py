@@ -23,20 +23,36 @@ from src.scheduler_sim import run_scheduler_sim
 logger = logging.getLogger(__name__)
 # ── Accuracy Proxy Calibration
 #─────────────────────────────────────────────────
-# Ground-truth measurements from Days 1-2.
+# Ground-truth measurements: baseline (Days 1-2) + full architecture sweep
+# (src/collect_calibration.py) — 6 architectures spanning num_layers x
+# width_mult, each measured at quant_bits in {32, 16, 8, 4}.
 # Format: (num_layers, width_mult, quant_bits, measured_accuracy)
-# ADD MORE POINTS as you measure them — each new point improves the proxy.
-# At minimum you should have the 4 rows from baseline_measurements.csv.
-# Replace the accuracy values below with YOUR actual measured values.
 CALIBRATION_POINTS = [
  # (num_layers, width_mult, quant_bits, accuracy)
- (3, 1.00, 32, 0.8170), # Day 1 baseline — replace with your actual value
- (3, 1.00, 16, 0.8170), # Day 2 quantization row
- (3, 1.00, 8, 0.8172), # Day 2 quantization row
- (3, 1.00, 4, 0.8172), # Day 2 quantization row
- # Add more as you collect data:
- # (2, 0.25, 8, 0.71XX),
- # (4, 0.75, 8, 0.80XX),
+ (3, 1.00, 32, 0.8170), # baseline
+ (3, 1.00, 16, 0.8170),
+ (3, 1.00, 8, 0.8172),
+ (3, 1.00, 4, 0.8172),
+ (2, 0.25, 32, 0.5249), # collect_calibration.py
+ (2, 0.25, 16, 0.5249),
+ (2, 0.25, 8, 0.5227),
+ (2, 0.25, 4, 0.5227),
+ (2, 1.00, 32, 0.6642),
+ (2, 1.00, 16, 0.6621),
+ (2, 1.00, 8, 0.6612),
+ (2, 1.00, 4, 0.6612),
+ (4, 0.25, 32, 0.7542),
+ (4, 0.25, 16, 0.7535),
+ (4, 0.25, 8, 0.7543),
+ (4, 0.25, 4, 0.7543),
+ (4, 1.00, 32, 0.8786),
+ (4, 1.00, 16, 0.8779),
+ (4, 1.00, 8, 0.8782),
+ (4, 1.00, 4, 0.8782),
+ (3, 0.625, 32, 0.7778),
+ (3, 0.625, 16, 0.7762),
+ (3, 0.625, 8, 0.7768),
+ (3, 0.625, 4, 0.7768),
 ]
 
 def _normalize(nl: int, wm: float, qb: int) -> np.ndarray:
@@ -85,8 +101,8 @@ def evaluate(config: dict) -> dict:
  >>> cfg = {"num_layers":3, "width_mult":0.5, "quant_bits":8,
  ... "time_slice":10.0, "priority":1, "dvfs_factor":0.75}
  >>> evaluate(cfg)
- {"accuracy": 0.7712, "memory_kb": 24.1, "energy_mj": 0.002541,
-"latency_ms": 25.61}
+ {"accuracy": 0.7527, "memory_kb": 23.14, "energy_mj": 0.005741,
+"latency_ms": 35.7168}
  """
  t0 = time.perf_counter()
  num_layers = int(config["num_layers"])
