@@ -1,44 +1,175 @@
 Evaluation Pipeline
 
-Every candidate configuration proposed by the Bayesian Optimization algorithm is evaluated through a unified evaluation pipeline. The configuration specifies six decision variables: the number of neural network layers, width multiplier, quantization precision, scheduler time slice, scheduling priority, and DVFS scaling factor. For each configuration, the framework constructs the neural network architecture, estimates memory usage after quantization, predicts classification accuracy using an inverse-distance weighted interpolation model calibrated on experimentally measured configurations, estimates energy consumption using a FLOP-based energy model, and evaluates scheduling latency using a microprocessor scheduling simulator. The evaluation returns four metrics—accuracy, memory footprint, energy consumption, and latency—which are subsequently used by the optimization algorithm.
+Every candidate configuration is evaluated through a unified pipeline
+(src/objective.py). The configuration specifies six decision variables:
+number of neural network layers, width multiplier, quantization precision,
+scheduler time slice, scheduling priority, and DVFS scaling factor. For each
+configuration, the framework constructs the neural network architecture,
+estimates memory usage after quantization, predicts classification accuracy
+using a scaling-law surrogate fitted to measured architectures, estimates
+energy consumption using a FLOP-based CMOS energy model, and evaluates
+scheduling latency using a discrete-event microprocessor scheduling
+simulator. The evaluation returns four metrics -- accuracy, memory
+footprint, energy consumption, and latency -- used by all search methods.
+Measured cost: ~4-10ms per call.
 
+Search Space. The optimization variable is
 
-We formulate the optimization problem as a constrained Bayesian Optimization task. The objective is to minimize estimated energy consumption while enforcing a minimum accuracy threshold. The search space consists of six design variables spanning both neural network architecture (number of layers, width multiplier, quantization precision) and scheduling parameters (time slice, task priority, and DVFS scaling factor). At each optimization iteration, the Bayesian optimizer proposes a candidate configuration, which is evaluated using the unified evaluation pipeline. The observed energy consumption and accuracy are then returned to update the surrogate model and guide subsequent sampling decisions.
-
-The evaluation pipeline computes four performance metrics: accuracy, memory usage, energy consumption, and scheduling latency. Among these, energy consumption serves as the optimization objective, while accuracy is enforced as a feasibility constraint. Memory and latency are recorded for analysis and comparison across configurations.
-
-x=(num_layers,width,bits,time_slice,priority,dvfs)
-
-earch Space. The optimization variable is defined as
-
-x=(L,W,Q,T,P,D)
+    x = (L, W, Q, T, P, D)
 
 where:
+    L: number of neural network layers, {2, 3, 4}
+    W: width multiplier, [0.25, 1.0]
+    Q: quantization bit-width, {4, 8, 16, 32}
+    T: scheduler time slice, [5.0, 50.0] ms
+    P: task priority, {0, 1, 2}
+    D: DVFS scaling factor, [0.5, 1.0]
 
-L: number of neural network layers
-W: width multiplier
-Q: quantization bit-width
-T: scheduler time slice
-P: task priority
-D: DVFS scaling factor
+L, W, Q are architectural; T, P, D are scheduling parameters. The search
+space combines discrete architectural decisions with continuous scheduling
+parameters, producing a mixed discrete-continuous optimization problem.
 
-The search space therefore combines discrete architectural decisions with continuous scheduling parameters, producing a mixed discrete–continuous optimization problem.
+Accuracy Surrogate. Accuracy is estimated by a scaling law fitted by
+ordinary least squares to 6 measured architectures (num_layers x
+width_mult, each measured at quant_bits in {32,16,8,4}, in
+results/baseline_measurements.csv):
 
-Accuracy is estimated using an inverse-distance weighted surrogate calibrated from measured configurations.
-Energy is estimated using a FLOP-based proxy.
-Scheduler latency is obtained from simulation rather than physical hardware.
+    accuracy = a + b*ln(num_layers) + c*ln(width_mult)
+
+with a=0.4449, b=0.3263, c=0.1021 (R^2=0.986, RMSE=1.37pp, leave-one-out
+RMSE=2.40pp, leave-one-out max error=3.82pp). This form was chosen over an
+earlier inverse-distance-weighting (IDW) interpolant because IDW was
+non-monotone -- on a dense sweep it produced 34/177 cases where a WIDER
+network was predicted LESS accurate than a narrower one, an artifact of
+interpolating between calibration points rather than modeling a trend. The
+log-linear scaling law is monotone non-decreasing in both depth and width
+by construction (b, c > 0) and has 0/217 violations on the same sweep. A
+power-law alternative (acc = 1 - B*L^-p*w^-q) fit the 6 points slightly
+better in-sample (R^2=0.975) but generalized far worse under leave-one-out
+(RMSE=9.75pp, max=21.4pp) because it is nonlinear in its parameters and
+therefore ill-conditioned with only 6 architectures; the log-linear form is
+linear in its parameters and has an exact closed-form fit. See
+src/validate_surrogate.py and results/surrogate_validation.json.
+
+quant_bits is NOT a fit variable: across all 6 measured architectures, the
+accuracy spread over quant_bits in {32,16,8,4} is at most 0.30 percentage
+points -- below the surrogate's own 2.40pp leave-one-out error. Post-
+training quantization to >=4 bits is therefore treated as accuracy-neutral
+for this model family, a measured finding rather than an assumption.
+Validity of the surrogate is claimed only inside the search box
+(num_layers in [2,4], width_mult in [0.25,1.0]); predictions are clipped to
+[0.40, 0.95] to prevent extrapolation past physical limits.
+
+Energy Model. E (mJ) = FLOPs * V^2 * C * dvfs_factor * (quant_bits/32) *
+1000, following CMOS dynamic power P = a*C*V^2*f. The quant_bits/32 factor
+models narrower fixed-point datapaths switching less capacitance per MAC.
+
+Scheduler Simulation. Latency is obtained from a SimPy discrete-event
+simulation of Round-Robin (time_slice, when priority != 0) or Priority
+(when priority == 0) scheduling over 50 Poisson-arrival inference tasks on
+a simulated 120MHz ARM Cortex-M4, not physical hardware. Latency depends on
+(num_layers, width_mult) through FLOPs and on (time_slice, priority,
+dvfs_factor); it is independent of quant_bits.
+
 All evaluations are deterministic under a fixed random seed.
 
-Bayesian Optimization was selected because the optimization problem consists of a mixed discrete–continuous search space spanning both neural network architecture and scheduling parameters. Unlike Grid Search, which requires discretization of continuous variables and performs exhaustive evaluation of predefined combinations, Bayesian Optimization can efficiently explore continuous parameter spaces while adapting future evaluations based on previously observed results. Random Search serves as a strong baseline because it uniformly samples the same search space; however, it does not exploit information gathered during earlier evaluations. In contrast, Bayesian Optimization constructs a probabilistic surrogate model that guides subsequent evaluations toward promising regions of the search space, enabling more sample-efficient optimization under a fixed evaluation budget. In our experiments, all optimization methods operate under identical search spaces, evaluation functions, and trial budgets to ensure a fair comparison.
+Constraints. Two feasibility constraints apply to every search method:
+    accuracy >= 0.75
+    latency_ms <= 100 (a 10 FPS real-time inference deadline)
+Jointly, ~29% of the search space is feasible (26,820 of 92,412 enumerated
+grid points -- see Reference Front below). The latency budget is a
+modeling choice; its sensitivity is checked at 50/100/200ms (13.2% / 29.0%
+/ 41.5% of the space feasible respectively), and the achievable
+hypervolume changes smoothly (0.0141 / 0.0168 / 0.0187) with no cliff, so
+conclusions do not hinge on the specific 100ms value.
 
-Performance Metrics. Four metrics are collected during evaluation: classification accuracy, memory footprint, energy consumption, and scheduling latency. These metrics capture the principal trade-offs encountered when deploying neural networks on resource-constrained embedded processors. Energy consumption serves as the optimization objective, accuracy is enforced as a feasibility constraint, while memory usage and latency are recorded for comparative analysis across candidate configurations.
+Two Problem Formulations
+
+Single-objective, constrained (SOO): minimize energy_mj subject to both
+feasibility constraints. This formulation necessarily converges to a
+single point once the optimizer has explored enough of the space --
+that is correct behavior for a single-objective optimizer, not a flaw. In
+our experiments, BO reaches the identical optimum (num_layers=4,
+width_mult=0.25, quant_bits=4, dvfs_factor=0.5; ~0.000759 mJ) on all 30
+tested seeds (std=0.0). The full 972-point Grid Search lattice reaches
+the same value with a ~32x larger evaluation budget; Random Search (30
+evaluations, matched budget) is 78.3% higher on average, with a bootstrap
+95% CI on the difference of [0.0019, 0.0037] mJ excluding zero (n=30
+seeds). The one-sided Wilcoxon signed-rank test is at its floor (p ~ 0,
+n=30) because BO's zero variance means it beats Random on every seed --
+this reflects that the SOO landscape is simple enough for BO to reliably
+find the true global optimum, not a statistical weakness that a larger n
+would resolve.
+
+Multi-objective (MOO) -- the headline result: maximize accuracy, minimize
+energy_mj, subject to latency_ms <= 100, via qNEHVI (BoTorch's noisy
+expected hypervolume improvement acquisition function through Ax). This is
+the appropriate formulation for a genuine two-objective tradeoff and is
+what src/plot_results.py's main Pareto figure reports. A single-objective
+optimizer's converged point cloud is not a Pareto front; plotting it as
+one (as an earlier version of this pipeline did) makes an unguided
+Random Search baseline look artificially competitive, since it explores
+rather than converges. See src/moo_experiment.py.
+
+Hypervolume and the Reference Front. Multi-objective search quality is
+measured by hypervolume: the volume of objective space dominated by the
+discovered Pareto set, relative to a FIXED reference point (accuracy=0.70,
+energy=0.10mJ, chosen to be worse than any feasible point and held
+constant across every method and seed in config.py -- hypervolumes
+computed against different reference points are not comparable).
+src/reference_front.py computes the ground-truth achievable Pareto front
+by EXHAUSTIVE enumeration: 92,412 grid points (num_layers x 151 width
+values x 4 quant_bits values x 51 dvfs values), with latency feasibility
+computed as the best achievable latency over all (time_slice, priority)
+scheduling choices per (num_layers, width, dvfs) triple (207,927 scheduler
+simulations). This yields a 108-point reference Pareto front with
+hypervolume 0.016821 -- the ceiling against which every search method is
+scored. A single 100-trial MOO run reaches hypervolume 0.016553, i.e.
+98.4% of the exhaustive ceiling, with a 10-point Pareto set spanning
+accuracy 0.72-0.87 and energy 0.0011-0.0123 mJ -- and, unlike the SOO
+corner solution, this front shows time_slice, priority, and dvfs_factor
+varying meaningfully across configurations (quant_bits sits at its
+minimum throughout, consistent with the accuracy-neutral quantization
+finding above).
+
+Robustness (multi-seed). Because qNEHVI's per-trial cost grows with the
+size of the discovered Pareto front (its acquisition function performs a
+non-dominated box decomposition), a 30-seed x 100-trial MOO sweep is not
+tractable (~5+ hours, measured). The primary hypervolume statistic
+therefore uses 15 seeds x 20 trials (~15-20 minutes): MOO reaches
+0.015891 +/- 0.000348 vs. Random's 0.011774 +/- 0.002225 at the same
+budget -- Cliff's delta = 1.0 (MOO's hypervolume exceeded Random's on
+every one of the 15 seeds, zero distributional overlap), bootstrap 95% CI
+on the difference [0.00315, 0.00523] excluding zero, and inverted
+generational distance to the reference front of 0.185 for MOO vs. 0.535
+for Random (MOO's front sits ~2.9x closer to the true front). A
+budget-matched check (hypervolume at 5/10/15/20 trials) shows the two
+methods statistically tied during Sobol initialization (5 trials) and MOO
+pulling ahead once the GP surrogate takes over (10+ trials) -- an honest
+finding about where BO's advantage actually originates, rather than a
+single endpoint comparison.
+
+Baselines. Grid Search evaluates the FULL lattice defined by GRID_LATTICE
+in config.py (3 x 3 x 4 x 3 x 3 x 3 = 972 configurations) -- exhaustive,
+not a random sample of it, since evaluate() is cheap enough (~4-10ms/call)
+to make this affordable. Random Search uniformly samples the same 6-D
+search space at a matched evaluation budget. Both share evaluate() and the
+search-space bounds with BO/MOO, so all four methods are directly
+comparable.
 
 Expected Contributions
 
-• Joint optimization of neural network architecture and scheduling parameters.
-
-• Unified evaluation pipeline combining architecture construction, quantization, energy estimation and scheduler simulation.
-
-• Bayesian Optimization framework for energy-efficient microprocessor scheduling under accuracy constraints.
-
-• Experimental comparison against Grid Search and Random Search under identical evaluation budgets.
+- Joint optimization of neural network architecture and scheduling
+  parameters, in both single- and multi-objective formulations.
+- A monotone, leave-one-out-validated scaling-law accuracy surrogate,
+  replacing a non-monotone interpolant.
+- An exhaustive reference Pareto front (92,412-point enumeration) giving
+  an absolute, not just relative, measure of search quality.
+- Multi-objective Bayesian Optimization (qNEHVI) reaching 98.4% of the
+  reference hypervolume ceiling within 100 evaluations, with cross-seed
+  statistical support (Cliff's delta = 1.0, n=15 seeds).
+- An explicit methodological comparison (src/plot_results.py
+  figure_soo_vs_moo) showing why a single-objective optimizer's converged
+  point cloud should not be presented as a Pareto front.
+- Experimental comparison against an exhaustive Grid Search and Random
+  Search under matched or explicitly stated evaluation budgets.

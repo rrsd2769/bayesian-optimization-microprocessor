@@ -2,18 +2,20 @@
 Unified evaluation function for the BO pipeline.
 evaluate(config) → {accuracy, memory_kb, energy_mj, latency_ms}
 Called by:
- - bo_experiment.py (30 times per BO run)
- - baselines.py (25 grid + 30 random times)
- - robustness_check.py (5 seeds × 60 calls)
-Performance target: <5 seconds per call.
-Accuracy: proxy via inverse-distance weighting from calibration points.
+ - bo_experiment.py, moo_experiment.py (SOO / MOO trial loops)
+ - baselines.py (grid + random search)
+ - robustness_check.py (30 seeds x multiple trials)
+Measured cost: ~3.8ms/call (dominated by model construction in build_model()).
+Accuracy: scaling-law proxy fitted to real architecture measurements —
+see accuracy_proxy() and src/validate_surrogate.py.
 """
 import os, sys, time, logging
+from functools import lru_cache
 import torch
 import numpy as np
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from config import (
- RANDOM_SEED, ACCURACY_THRESHOLD, LOG_FORMAT
+ RANDOM_SEED, ACCURACY_THRESHOLD, LATENCY_BUDGET_MS, LOG_FORMAT
 )
 from src.model import build_model, get_model_stats
 from src.quantization import apply_quantization
@@ -55,34 +57,75 @@ CALIBRATION_POINTS = [
  (3, 0.625, 4, 0.7768),
 ]
 
-def _normalize(nl: int, wm: float, qb: int) -> np.ndarray:
- """Normalize architecture params to [0,1] for distance calculation."""
- return np.array([
- (nl - 2) / 2.0, # num_layers: {2,3,4} → {0, 0.5, 1.0}
- (wm - 0.25) / 0.75, # width_mult: [0.25,1.0] → [0,1]
- (np.log2(max(qb,1)) - 2) / 3.0, # quant_bits log scale → [0,1]
- ])
+
+# ── Accuracy scaling law ──────────────────────────────────────────────────────
+# acc = a + b*ln(num_layers) + c*ln(width_mult)
+#
+# Fitted by ordinary least squares to the 6 measured architectures in
+# CALIBRATION_POINTS (accuracy averaged over quant_bits — see the docstring
+# on accuracy_proxy() for why quantization is not a fit variable). Monotone
+# non-decreasing in both depth and width by construction whenever b, c > 0,
+# which holds for this data (depth dominates: b > c). Functional form follows
+# the neural scaling-law literature (Hestness et al. 2017; Kaplan et al.
+# 2020), specialised to the two architecture degrees of freedom searched
+# here. This replaces an inverse-distance-weighting proxy that was
+# non-monotone (9/45 violations on a dense width sweep) — see
+# src/validate_surrogate.py for the comparison.
+#
+# Validity is claimed ONLY inside the search box num_layers in [2,4],
+# width_mult in [0.25,1.0]; predictions are clipped to ACCURACY_CLIP to
+# prevent nonsensical extrapolation past the box.
+ACCURACY_CLIP = (0.40, 0.95)
+
+def _fit_scaling_law() -> tuple:
+ """
+ Least-squares fit of (a, b, c) to CALIBRATION_POINTS, averaged over
+ quant_bits per architecture. Linear in its parameters, so this is an
+ exact closed-form fit — no initialization or convergence risk.
+ """
+ arch = {}
+ for (nl, wm, _qb, acc) in CALIBRATION_POINTS:
+  arch.setdefault((nl, wm), []).append(acc)
+ design = np.array([[1.0, np.log(nl), np.log(wm)] for (nl, wm) in arch])
+ target = np.array([np.mean(v) for v in arch.values()])
+ coef, *_ = np.linalg.lstsq(design, target, rcond=None)
+ return tuple(float(c) for c in coef)
+
+_SCALING_A, _SCALING_B, _SCALING_C = _fit_scaling_law()
+
 def accuracy_proxy(num_layers: int, width_mult: float, quant_bits: int) ->float:
  """
- Estimate accuracy via inverse-distance weighting from calibration points.
- Reference: Shepard interpolation / IDW spatial interpolation.
- If exact config matches a calibration point, returns the exact value.
- Otherwise, nearby calibration points contribute proportionally.
+ Estimate accuracy from a monotone scaling law fitted to measured
+ architecture data.
+
+ quant_bits is accepted for interface compatibility but does not affect
+ the result: across all 6 measured architectures in CALIBRATION_POINTS,
+ the accuracy spread over quant_bits in {32,16,8,4} is at most 0.30
+ percentage points — below the surrogate's own ~2.4pp leave-one-out
+ error (see results/surrogate_validation.json). Post-training
+ quantization to >=4 bits is accuracy-neutral for this model family at
+ measurement resolution, so it is treated as a null effect rather than
+ fit as signal.
  """
- query = _normalize(num_layers, width_mult, quant_bits)
- total_w = 0.0
- weighted_acc = 0.0
- for (nl, wm, qb, acc) in CALIBRATION_POINTS:
-  pt = _normalize(nl, wm, qb)
-  dist = np.linalg.norm(query - pt)
-  if dist < 1e-8: # Exact match
-   return float(acc)
-  w = 1.0 / (dist ** 2)
-  weighted_acc += w * acc
-  total_w += w
- if total_w < 1e-10:
-  return float(np.mean([a for (*_, a) in CALIBRATION_POINTS]))
- return float(np.clip(weighted_acc / total_w, 0.50, 0.95))
+ acc = _SCALING_A + _SCALING_B * np.log(num_layers) + _SCALING_C * np.log(width_mult)
+ return float(np.clip(acc, *ACCURACY_CLIP))
+
+@lru_cache(maxsize=4096)
+def _arch_model_and_stats(num_layers: int, width_mult: float):
+ """
+ Cached (model, stats) for a given architecture. FLOPs/params depend only
+ on (num_layers, width_mult), and build_model() is deterministic
+ (torch.manual_seed(RANDOM_SEED) is set before every construction), so
+ the cached model is bit-identical to a freshly-built one. This is the
+ dominant cost in evaluate() (torchinfo's summary() forward pass) and
+ becomes essential for exhaustive enumeration (src/reference_front.py)
+ and repeated architectures within a single BO/MOO run.
+ """
+ torch.manual_seed(RANDOM_SEED)
+ model = build_model({"num_layers": num_layers, "width_mult": width_mult})
+ model.eval()
+ stats = get_model_stats(model)
+ return model, stats
 
 def evaluate(config: dict) -> dict:
  """
@@ -101,7 +144,7 @@ def evaluate(config: dict) -> dict:
  >>> cfg = {"num_layers":3, "width_mult":0.5, "quant_bits":8,
  ... "time_slice":10.0, "priority":1, "dvfs_factor":0.75}
  >>> evaluate(cfg)
- {"accuracy": 0.7527, "memory_kb": 23.14, "energy_mj": 0.005741,
+ {"accuracy": 0.7326, "memory_kb": 23.14, "energy_mj": 0.005741,
 "latency_ms": 35.7168}
  """
  t0 = time.perf_counter()
@@ -109,11 +152,8 @@ def evaluate(config: dict) -> dict:
  width_mult = float(config["width_mult"])
  quant_bits = int(config["quant_bits"])
  dvfs_factor = float(config["dvfs_factor"])
-# Step 1: Architecture → FLOPs + param count
- torch.manual_seed(RANDOM_SEED)
- model = build_model(config)
- model.eval()
- stats = get_model_stats(model)
+# Step 1: Architecture → FLOPs + param count (cached)
+ model, stats = _arch_model_and_stats(num_layers, width_mult)
  # Step 2: Memory after quantization
  _, memory_kb = apply_quantization(model, quant_bits)
  # Step 3: Accuracy from proxy
@@ -136,6 +176,17 @@ def evaluate(config: dict) -> dict:
  "energy_mj": round(energy_mj, 6),
  "latency_ms": round(latency_ms, 4),
  }
+
+def is_feasible(result: dict) -> bool:
+ """
+ Joint feasibility: accuracy floor AND latency budget.
+ Single source of truth — used by bo_experiment.py, moo_experiment.py,
+ baselines.py, and robustness_check.py so the definition cannot drift
+ between them.
+ """
+ return (result["accuracy"] >= ACCURACY_THRESHOLD
+  and result["latency_ms"] <= LATENCY_BUDGET_MS)
+
 def evaluate_for_ax(parameterization: dict) -> dict:
  """
  Ax-compatible wrapper.
@@ -175,12 +226,16 @@ if __name__ == "__main__":
    f"{r['energy_mj']:<14.6f} {r['latency_ms']:.4f}")
   assert all(v > 0 for v in r.values()), f"Non-positive metric in: {r}"
  print(f"\nMean evaluation time: {sum(t_calls)/len(t_calls):.0f}ms per call")
- # Critical: baseline config must match Day 1 measured accuracy within 1%
+ # The scaling-law surrogate FITS the calibration data rather than
+ # interpolating it, so the baseline architecture is not reproduced
+ # exactly. Tolerance is the surrogate's own leave-one-out RMSE (see
+ # results/surrogate_validation.json, ~2.4pp) with headroom, not 1%.
+ SURROGATE_LOO_TOLERANCE = 0.03
  baseline_r = evaluate({"num_layers": 3, "width_mult": 1.0, "quant_bits": 32,
  "time_slice": 20.0, "priority": 1, "dvfs_factor":
 1.0})
- expected_acc = CALIBRATION_POINTS[0][3] # Your Day 1 measured accuracy
- assert abs(baseline_r["accuracy"] - expected_acc) < 0.01, \
+ expected_acc = CALIBRATION_POINTS[0][3] # Day 1 measured accuracy
+ assert abs(baseline_r["accuracy"] - expected_acc) < SURROGATE_LOO_TOLERANCE, \
  f"Proxy mismatch: got {baseline_r['accuracy']:.4f}, expected {expected_acc:.4f}"
  # Test Ax wrapper format
  ax_r = evaluate_for_ax(test_configs[0])

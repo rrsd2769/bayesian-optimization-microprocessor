@@ -1,0 +1,43 @@
+{
+  "grid_size": 92412,
+  "feasible_count": 26820,
+  "feasible_fraction": 0.2902,
+  "pareto_front_size": 108,
+  "reference_hypervolume": 0.016821,
+  "enumeration_seconds": 248.0,
+  "grid_spec": {
+    "num_layers": [
+      2,
+      3,
+      4
+    ],
+    "width_mult_points": 151,
+    "quant_bits": [
+      4,
+      8,
+      16,
+      32
+    ],
+    "dvfs_factor_points": 51
+  },
+  "latency_sensitivity": {
+    "50.0": {
+      "feasible_count": 12176,
+      "feasible_fraction": 0.1318,
+      "pareto_front_size": 69,
+      "hypervolume": 0.014088
+    },
+    "100.0": {
+      "feasible_count": 26820,
+      "feasible_fraction": 0.2902,
+      "pareto_front_size": 108,
+      "hypervolume": 0.016821
+    },
+    "200.0": {
+      "feasible_count": 38324,
+      "feasible_fraction": 0.4147,
+      "pareto_front_size": 143,
+      "hypervolume": 0.018677
+    }
+  }
+}

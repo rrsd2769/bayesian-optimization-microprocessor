@@ -14,10 +14,10 @@ from pathlib import Path
 from typing import List, Dict
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from config.config import (
- RANDOM_SEED, RESULTS_DIR, BO_TRIALS, ACCURACY_THRESHOLD,
+ RANDOM_SEED, RESULTS_DIR, BO_TRIALS, ACCURACY_THRESHOLD, LATENCY_BUDGET_MS,
  OBJECTIVE_METRIC, LOG_FORMAT, LOGS_DIR
 )
-from src.objective import evaluate
+from src.objective import evaluate, is_feasible
 from ax.service.ax_client import AxClient, ObjectiveProperties
 logging.basicConfig(
  level=logging.INFO, format=LOG_FORMAT,
@@ -46,7 +46,10 @@ PARAMETERS = [
 ]
 
 OBJECTIVES = {"energy_mj": ObjectiveProperties(minimize=True)}
-OUTCOME_CONSTRAINTS = [f"accuracy >= {ACCURACY_THRESHOLD}"]
+OUTCOME_CONSTRAINTS = [
+ f"accuracy >= {ACCURACY_THRESHOLD}",
+ f"latency_ms <= {LATENCY_BUDGET_MS}",
+]
 # ── CSV columns — shared with baselines.py 
 
 FIELDNAMES = [
@@ -109,10 +112,11 @@ def run_bo_experiment(
     raw_data={
         "energy_mj": (raw["energy_mj"], 0.0),
         "accuracy": (raw["accuracy"], 0.0),
+        "latency_ms": (raw["latency_ms"], 0.0),
     },
 )
-   is_feasible = raw["accuracy"] >= ACCURACY_THRESHOLD
-   if is_feasible and raw["energy_mj"] < best_energy:
+   feasible = is_feasible(raw)
+   if feasible and raw["energy_mj"] < best_energy:
     best_energy = raw["energy_mj"]
     best_config = parameters.copy()
    row = {
@@ -132,7 +136,7 @@ round(float(parameters["dvfs_factor"]), 4),
  "memory_kb": raw["memory_kb"],
  "energy_mj": raw["energy_mj"],
  "latency_ms": raw["latency_ms"],
- "is_feasible": is_feasible,
+ "is_feasible": feasible,
  "cumulative_best_energy": round(best_energy, 6) if best_energy <
 float("inf") else "",
  }
@@ -146,7 +150,7 @@ float("inf") else "",
  f"acc={raw['accuracy']:.4f} | "
  f"mem={raw['memory_kb']:.1f}KB | "
  f"lat={raw['latency_ms']:.2f}ms | "
- f"feasible={is_feasible} | "
+ f"feasible={feasible} | "
  f"best={best_energy:.6f}mJ | "
  f"{elapsed:.1f}s"
  )
