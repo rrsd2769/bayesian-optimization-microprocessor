@@ -2,8 +2,13 @@
 Baseline search methods: Grid Search and Random Search.
 CRITICAL DESIGN CONSTRAINT:
  Both methods use the SAME evaluate() function and SAME search space
- as bo_experiment.py. Same budget (RANDOM_TRIALS = BO_TRIALS = 30).
- Same CSV column format for direct comparison in plot_results.py.
+ as bo_experiment.py. Same CSV column format for direct comparison in
+ plot_results.py.
+Grid Search evaluates the FULL lattice (972 configs — see GRID_LATTICE in
+config.py), not a random sample of it. Random Search uses RANDOM_TRIALS
+configs for parity with the single-objective BO budget. Grid therefore
+runs at a ~10x budget ADVANTAGE over BO/Random, which makes any result
+where BO or Random matches or beats it a stronger claim, not a weaker one.
 References:
  Bergstra & Bengio (2012) "Random Search for Hyper-parameter Optimization"
  → Random search baseline is essential for BO comparison papers.
@@ -15,10 +20,10 @@ import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from config.config import (
- RANDOM_SEED, RESULTS_DIR, GRID_CONFIGS, RANDOM_TRIALS,
- ACCURACY_THRESHOLD, LOG_FORMAT, LOGS_DIR
+ RANDOM_SEED, RESULTS_DIR, GRID_LATTICE, RANDOM_TRIALS,
+ LOG_FORMAT, LOGS_DIR
 )
-from src.objective import evaluate
+from src.objective import evaluate, is_feasible
 logging.basicConfig(
  level=logging.INFO, format=LOG_FORMAT,
  handlers=[
@@ -34,26 +39,14 @@ FIELDNAMES = [
  "accuracy", "memory_kb", "energy_mj", "latency_ms",
  "is_feasible", "cumulative_best_energy",
 ]
-def _make_grid(n: int, seed: int) -> List[dict]:
+def _make_grid() -> List[dict]:
  """
- Sample n configs from a coarse grid over the search space.
- Grid: 3 values per param → 3^6 = 729 total → random sample of n.
- Seeded sampling ensures reproducibility.
+ Full lattice over GRID_LATTICE — exhaustive, not sampled.
+ 3 x 3 x 4 x 3 x 3 x 3 = 972 configs.
  """
- rng = np.random.default_rng(seed)
- grid = {
- "num_layers": [2, 3, 4],
- "width_mult": [0.25, 0.625, 1.0],
- "quant_bits": [4, 8, 16, 32], # all values
- "time_slice": [5.0, 27.5, 50.0],
- "priority": [0, 1, 2],
- "dvfs_factor": [0.5, 0.75, 1.0],
- }
- all_combos = list(itertools.product(*grid.values()))
- keys = list(grid.keys())
- idxs = rng.choice(len(all_combos), size=min(n, len(all_combos)),
-replace=False)
- return [dict(zip(keys, all_combos[i])) for i in idxs]
+ keys = list(GRID_LATTICE.keys())
+ all_combos = list(itertools.product(*GRID_LATTICE.values()))
+ return [dict(zip(keys, combo)) for combo in all_combos]
 
 def _run_search(configs: List[dict], method: str, seed: int,
  output_csv: Path) -> List[Dict]:
@@ -67,8 +60,8 @@ def _run_search(configs: List[dict], method: str, seed: int,
    t0 = time.perf_counter()
    raw = evaluate(config)
    elapsed = time.perf_counter() - t0
-   is_feasible = raw["accuracy"] >= ACCURACY_THRESHOLD
-   if is_feasible and raw["energy_mj"] < best_energy:
+   feasible = is_feasible(raw)
+   if feasible and raw["energy_mj"] < best_energy:
     best_energy = raw["energy_mj"]
    row = {
  "trial_id": i + 1,
@@ -85,7 +78,7 @@ def _run_search(configs: List[dict], method: str, seed: int,
  "memory_kb": raw["memory_kb"],
  "energy_mj": raw["energy_mj"],
  "latency_ms": raw["latency_ms"],
- "is_feasible": is_feasible,
+ "is_feasible": feasible,
  "cumulative_best_energy": round(best_energy, 6) if best_energy <
 float("inf") else "",
  }
@@ -93,21 +86,23 @@ float("inf") else "",
    writer.writerow(row)
    f.flush()
 
-   logger.info(
- f"[{method} {i+1:02d}/{len(configs)}] "
+   if (i + 1) % 50 == 0 or (i + 1) == len(configs):
+    logger.info(
+ f"[{method} {i+1:04d}/{len(configs)}] "
  f"E={raw['energy_mj']:.6f}mJ | acc={raw['accuracy']:.4f} | "
- f"feasible={is_feasible} | best={best_energy:.6f}mJ | {elapsed:.1f}s"
+ f"feasible={feasible} | best={best_energy:.6f}mJ | {elapsed*1000:.1f}ms"
  )
  logger.info(f"{method} complete. Best energy: {best_energy:.6f} mJ → {output_csv}")
  return results
-def run_grid_search(n: int = GRID_CONFIGS, seed: int = RANDOM_SEED,
+def run_grid_search(seed: int = RANDOM_SEED,
  output_csv: Path = None) -> List[Dict]:
+ """Exhaustive search over the full GRID_LATTICE (972 configs)."""
  if output_csv is None:
   output_csv = RESULTS_DIR / "grid_results.csv"
+ configs = _make_grid()
  logger.info("=" * 50)
- logger.info(f"GRID SEARCH | n={n} | seed={seed}")
+ logger.info(f"GRID SEARCH (exhaustive) | n={len(configs)} | seed={seed}")
  logger.info("=" * 50)
- configs = _make_grid(n, seed)
  return _run_search(configs, "Grid", seed, output_csv)
 def run_random_search(n: int = RANDOM_TRIALS, seed: int = RANDOM_SEED,
  output_csv: Path = None) -> List[Dict]:

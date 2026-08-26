@@ -2,12 +2,12 @@
   "best_energy_mj": 0.000759,
   "config": {
     "num_layers": 4,
-    "width_mult": 0.25,
+    "width_mult": 0.2507984650562858,
     "quant_bits": 4,
-    "time_slice": 11.454394659313497,
-    "priority": 2,
+    "time_slice": 23.560788795705612,
+    "priority": 1,
     "dvfs_factor": 0.5
   },
-  "seed": 2024,
+  "seed": 30,
   "n_trials": 30
 }

@@ -1,0 +1,43 @@
+{
+  "seed": 15,
+  "n_trials": 20,
+  "final_hypervolume": 0.01553254,
+  "pareto_set": [
+    {
+      "params": {
+        "num_layers": 4,
+        "width_mult": 0.6470400123570087,
+        "quant_bits": 4,
+        "time_slice": 50.0,
+        "priority": 0,
+        "dvfs_factor": 1.0
+      },
+      "energy_mj": 0.008643970890396981,
+      "accuracy": 0.8527989415154658
+    },
+    {
+      "params": {
+        "num_layers": 4,
+        "width_mult": 0.7189598840133166,
+        "quant_bits": 8,
+        "time_slice": 50.0,
+        "priority": 0,
+        "dvfs_factor": 1.0
+      },
+      "energy_mj": 0.021710159360145843,
+      "accuracy": 0.8635262993322752
+    },
+    {
+      "params": {
+        "num_layers": 4,
+        "width_mult": 0.5236219086218625,
+        "quant_bits": 4,
+        "time_slice": 15.018665231764317,
+        "priority": 1,
+        "dvfs_factor": 0.5257104244083166
+      },
+      "energy_mj": 0.003037082281643573,
+      "accuracy": 0.8311735955651949
+    }
+  ]
+}

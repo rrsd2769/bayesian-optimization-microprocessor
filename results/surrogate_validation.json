@@ -1,0 +1,81 @@
+{
+  "scaling_law": {
+    "coefficients": {
+      "a": 0.4449351882620487,
+      "b": 0.3262742335317677,
+      "c": 0.10213133472035804
+    },
+    "r_squared": 0.98578,
+    "rmse_pp": 1.371,
+    "max_residual_pp": 2.152,
+    "per_architecture": [
+      {
+        "num_layers": 2,
+        "width_mult": 0.25,
+        "measured": 0.5238,
+        "predicted": 0.5295071599074701,
+        "residual_pp": -0.571
+      },
+      {
+        "num_layers": 2,
+        "width_mult": 1.0,
+        "measured": 0.662175,
+        "predicted": 0.6710912533239506,
+        "residual_pp": -0.892
+      },
+      {
+        "num_layers": 3,
+        "width_mult": 0.625,
+        "measured": 0.7769,
+        "predicted": 0.755381972717538,
+        "residual_pp": 2.152
+      },
+      {
+        "num_layers": 3,
+        "width_mult": 1.0,
+        "measured": 0.8171,
+        "predicted": 0.8033840706958173,
+        "residual_pp": 1.372
+      },
+      {
+        "num_layers": 4,
+        "width_mult": 0.25,
+        "measured": 0.7540749999999998,
+        "predicted": 0.7556632249693721,
+        "residual_pp": -0.159
+      },
+      {
+        "num_layers": 4,
+        "width_mult": 1.0,
+        "measured": 0.878225,
+        "predicted": 0.8972473183858526,
+        "residual_pp": -1.902
+      }
+    ]
+  },
+  "leave_one_out": {
+    "loo_rmse_pp": 2.402,
+    "loo_max_error_pp": 3.823,
+    "n_architectures": 6
+  },
+  "monotonicity": {
+    "violations": 0,
+    "steps_checked": 217
+  },
+  "quantization_null_effect": {
+    "max_spread_pp": 0.3,
+    "per_architecture_pp": {
+      "L3_w1.0": 0.02,
+      "L2_w0.25": 0.22,
+      "L2_w1.0": 0.3,
+      "L4_w0.25": 0.08,
+      "L4_w1.0": 0.07,
+      "L3_w0.625": 0.16
+    }
+  },
+  "comparison_vs_old_idw_proxy": {
+    "idw_monotonicity_violations": 34,
+    "idw_steps_checked": 177,
+    "scaling_law_violations": 0
+  }
+}

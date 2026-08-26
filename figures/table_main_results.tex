@@ -1,17 +1,34 @@
-% Table I: Main Results Comparison
+% Table I: Main Results Comparison (single-objective, constrained)
 % Requires: \usepackage{booktabs} in preamble
 \begin{table}[t]
 \centering
-\caption{Performance Comparison of Search Methods (30 Evaluations Each)}
+\caption{Best feasible configuration per search method (accuracy $\geq$ threshold, latency $\leq$ budget). BO: 30 evaluations. Grid: full 972-config lattice (a $\sim$32x evaluation-budget advantage over BO).}
 \label{tab:main_results}
 \begin{tabular}{lcccc}
 \toprule
 Method & Accuracy (\%) $\uparrow$ & Energy (mJ) $\downarrow$ & Memory (KB) $\downarrow$ & Latency (ms) $\downarrow$ \\
 \midrule
-\textbf{Bayesian Opt. (ours)} & \textbf{85.61} & \textbf{0.0008} & \textbf{10.8} & \textbf{9.38} \\
-Random Search [X] & 87.60 & 0.0038 & 16.4 & 26.18 \\
-Grid Search & 87.82 & 0.0015 & 12.0 & 9.24 \\
+\textbf{Bayesian Opt. (ours)} & \textbf{82.21} & \textbf{0.0008} & \textbf{12.0} & \textbf{9.24} \\
+Random Search [X] & 86.42 & 0.0038 & 16.4 & 26.18 \\
+Grid Search (exhaustive, 972 configs) & 84.92 & 0.0008 & 12.0 & 9.24 \\
 \bottomrule
-\multicolumn{5}{l}{\footnotesize Bold = proposed method. Feasibility constraint: accuracy $\geq$ 0.75.} \\
+\multicolumn{5}{l}{\footnotesize Bold = proposed method. Feasibility: accuracy $\geq$ 0.75, latency $\leq$ 100ms.} \\
+\end{tabular}
+\end{table}
+
+% Table II: Multi-Objective Results (headline)
+\begin{table}[t]
+\centering
+\caption{Multi-objective search results: hypervolume (dominated volume relative to a fixed reference point), IGD to the exhaustive reference Pareto front (108 points from a grid enumeration over the full search space), and Pareto-set size.}
+\label{tab:moo_results}
+\begin{tabular}{lccc}
+\toprule
+Method & Hypervolume $\uparrow$ & IGD $\downarrow$ & Pareto-set size \\
+\midrule
+\textbf{Multi-Obj. BO (ours)} & \textbf{0.016553} & \textbf{0.1848} & \textbf{10} \\
+Random Search & 0.014991 & 0.5348 & 6 \\
+Reference (exhaustive) & 0.016821 & 0.0000 & 108 \\
+\bottomrule
+\multicolumn{4}{l}{\footnotesize Bootstrap 95\% CI on HV(MOO)$-$HV(Random), n=15 seeds: [0.00315, 0.00523].} \\
 \end{tabular}
 \end{table}
