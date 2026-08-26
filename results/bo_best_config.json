@@ -1,10 +1,10 @@
 {
-  "best_energy_mj": 0.002829,
+  "best_energy_mj": 0.000759,
   "config": {
-    "num_layers": 2,
-    "width_mult": 0.2632377936384205,
-    "quant_bits": 32,
-    "time_slice": 5.0,
+    "num_layers": 4,
+    "width_mult": 0.25,
+    "quant_bits": 4,
+    "time_slice": 11.454394659313497,
     "priority": 2,
     "dvfs_factor": 0.5
   },
