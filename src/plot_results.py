@@ -4,7 +4,6 @@ Figures (single-objective / SOO — BO vs Random vs Grid, all under the
 accuracy+latency constraint, minimizing energy):
  1. convergence_curve.pdf — best energy vs. trial number
  2. comparison_bar.pdf — best result per method on all 4 metrics
- A. energy_improvement_budget.pdf — cumulative energy improvement vs. budget
  B. feasible_discovery_rate.pdf — cumulative feasible-config discovery
 Figures (multi-objective / MOO — the headline result):
  3. pareto_frontier.pdf — accuracy vs energy, MOO vs Random vs the
@@ -14,6 +13,8 @@ Figures (multi-objective / MOO — the headline result):
  D. soo_vs_moo.pdf — single-objective collapse vs multi-objective front,
     same search space, same budget class
  E. pareto_parallel_coords.pdf — parameter values along the MOO Pareto set
+ F. latency_sensitivity.pdf — reference-front hypervolume/feasibility vs.
+    latency budget, confirming the 100ms choice isn't a discontinuity
 LaTeX:
  table_main_results.tex — main results table for paper Section V
 IEEE style: serif font, 3.5in width, 300dpi, PDF export, grayscale-safe markers.
@@ -97,80 +98,6 @@ def cumulative_best(rows: List[Dict], metric: str = "energy_mj") -> List[float]:
  return result
 
 
-def compute_energy_improvement_series(rows: List[Dict]) -> List[float]:
-    """
-    Compute per-trial cumulative energy improvement percentage.
- 
-    For each evaluation step i, the improvement is measured relative
-    to the energy of the FIRST feasible configuration discovered:
- 
-        improvement_pct[i] =
-            100 * (first_feasible_energy - best_feasible_energy_so_far[i])
-            / first_feasible_energy
- 
-    Design rationale:
-        Using the first feasible energy as the reference (not the worst
-        overall energy) isolates the optimisation gain from the
-        exploration gain. This makes the comparison fair: all methods
-        start from 0% at their respective first feasible hit, and the
-        y-axis shows only how much better the search gets after that
-        point. A higher final value means the method found a
-        substantially better configuration within the same budget.
- 
-    Guarantees on the returned series:
-        - Values before the first feasible trial are NaN (undefined).
-        - The first feasible trial always yields exactly 0.0%.
-        - The series is monotonically non-decreasing (cumulative best).
-        - Values are clamped to [0, 100] to handle floating-point noise.
- 
-    Args:
-        rows (List[Dict]): All rows for one method from a results CSV,
-                           in trial order. Each dict must contain
-                           'energy_mj' and 'is_feasible'.
- 
-    Returns:
-        List[float]: Per-trial improvement percentage. Length equals
-                     len(rows). NaN where no feasible config found yet.
- 
-    Raises:
-        ValueError: If rows is empty.
- 
-    Example:
-        >>> series = compute_energy_improvement_series(bo_rows)
-        >>> series[:4]
-        [nan, 0.0, 0.0, 12.7]
-    """
-    if not rows:
-        raise ValueError("compute_energy_improvement_series: rows must not be empty.")
- 
-    first_feasible_energy: float = None   # type: ignore[assignment]
-    cumulative_best        = float("inf")
-    series: List[float]   = []
- 
-    for r in rows:
-        energy     = float(r["energy_mj"])
-        is_feasible = str(r.get("is_feasible", "")).lower() in ("true", "1")
- 
-        if is_feasible:
-            if first_feasible_energy is None:
-                # First feasible hit: record the reference energy.
-                first_feasible_energy = energy
-            cumulative_best = min(cumulative_best, energy)
- 
-        if first_feasible_energy is None:
-            # No feasible config found yet — improvement undefined.
-            series.append(float("nan"))
-        elif first_feasible_energy == 0.0:
-            # Degenerate case: reference energy is zero → cannot normalise.
-            # Treat as 0% improvement throughout (conservative).
-            series.append(0.0)
-        else:
-            pct = 100.0 * (first_feasible_energy - cumulative_best) / first_feasible_energy
-            series.append(float(np.clip(pct, 0.0, 100.0)))
- 
-    return series
- 
- 
 def compute_feasible_discovery_series(rows: List[Dict]) -> List[int]:
     """
     Compute the cumulative count of feasible configurations discovered.
@@ -262,11 +189,17 @@ def figure1_convergence(bo, rand, grid) -> Path:
 def figure2_comparison_bar(bo, rand, grid) -> Path:
  """
  4-panel grouped bar chart: best result per method on each metric.
- Story: BO achieves best energy with comparable accuracy/memory/latency.
+ Story: single-objective energy minimization has a box-corner optimum
+ (Defect 5, see docs/plans/2026-08-26-multiobjective-bo-upgrade.md), so
+ exhaustive Grid Search always finds it and BO can only match it, never
+ beat it. BO ties Grid's energy/memory/latency using 30 evaluations vs
+ Grid's 972 — the evaluation-count annotation on each x-axis label is the
+ honest headline here, not a claim that BO's final value is lower.
  Paper placement: Section V-B, double column (7.0in).
  Caption: "Best feasible result per search method across all four metrics.
- BO achieves the lowest energy while maintaining accuracy above
- the constraint threshold of {ACCURACY_THRESHOLD}."
+ BO matches Grid Search's exhaustive optimum using 97% fewer
+ evaluations, while maintaining accuracy above the constraint
+ threshold of {ACCURACY_THRESHOLD}."
  """
  metrics = ["accuracy", "energy_mj", "memory_kb", "latency_ms"]
  titles = [
@@ -281,6 +214,12 @@ def figure2_comparison_bar(bo, rand, grid) -> Path:
  method_rows = {"BO": bo, "Random": rand, "Grid": grid}
  vals = {m: {met: best_metric(method_rows[m], met) for met in metrics}
          for m in methods}
+ # Grid is exhaustive over the 972-config lattice, so it always finds the
+ # true optimum for a single-objective metric like energy — BO can tie it
+ # at best, never beat it. The evaluation count under each label is the
+ # honest story: BO matches the exhaustive optimum at a fraction of the cost.
+ n_evals = {m: len(method_rows[m]) for m in methods}
+ xtick_labels = [f"{m}\n(n={n_evals[m]})" for m in methods]
  fig, axes = plt.subplots(1, 4, figsize=(7.0, 2.5))
  for ax, metric, title in zip(axes, metrics, titles):
   v = [vals[m][metric] for m in methods]
@@ -294,15 +233,16 @@ def figure2_comparison_bar(bo, rand, grid) -> Path:
  fmt, ha="center", va="bottom", fontsize=6.5)
   ax.set_title(title, fontsize=7.5)
   ax.set_xticks(range(len(methods)))
-  ax.set_xticklabels(methods, fontsize=7)
+  ax.set_xticklabels(xtick_labels, fontsize=6.5)
  # Add constraint line for accuracy panel
   if metric == "accuracy":
    ax.axhline(ACCURACY_THRESHOLD, color="red", linestyle="--",
  linewidth=0.8, alpha=0.7,
 label=f"min={ACCURACY_THRESHOLD}")
    ax.legend(fontsize=6, loc="lower right")
- fig.suptitle("Best Feasible Configuration per Search Method", fontsize=9,
-y=1.02)
+ fig.suptitle("Best Feasible Configuration per Search Method\n"
+"BO matches Grid's exhaustive optimum using 30 evaluations vs 972",
+fontsize=9, y=1.08)
  fig.tight_layout()
  out = FIGURES_DIR / "comparison_bar.pdf"
  fig.savefig(out)
@@ -608,132 +548,6 @@ def figure_pareto_parallel_coords(moo: List[Dict]) -> Path:
  return out
 
 
-def figure_energy_improvement_budget(bo: List[Dict], rand: List[Dict],
-                                     grid: List[Dict]) -> Path:
-    """
-    Figure A: Energy Improvement vs. Evaluation Budget.
- 
-    Saved as: figures/energy_improvement_budget.pdf
- 
-    Plots the cumulative percentage improvement in best feasible energy
-    as a function of the number of configurations evaluated. Each method's
-    curve starts at 0% when its first feasible configuration is found and
-    rises as better configurations are discovered.
- 
-    The improvement is defined relative to each method's own first feasible
-    energy (not a shared baseline), so all curves start from the same
-    y-origin (0%) at the trial where the first feasible config appears.
-    This isolates *optimisation efficiency* from *feasibility rate* — the
-    latter is shown separately in figure_feasible_discovery_rate().
- 
-    Scientific purpose:
-        Directly answers: "After k evaluations, by how much has each method
-        improved over its starting point?" A higher final improvement
-        percentage, or the same improvement reached in fewer evaluations,
-        constitutes evidence of superior optimisation efficiency.
- 
-    Paper placement:
-        Section V-A. Single column (3.5 × 2.5 in).
- 
-    Suggested caption (copy into Overleaf):
-        "Cumulative energy improvement (\\%) relative to each method's
-        first feasible configuration, as a function of the number of
-        configurations evaluated. BO (solid) achieves a higher final
-        improvement than Random Search (dashed) and Grid Search (dotted)
-        within the same evaluation budget, demonstrating superior
-        sample efficiency in locating energy-optimal configurations."
- 
-    Args:
-        bo   (List[Dict]): All rows from bo_results.csv.
-        rand (List[Dict]): All rows from random_results.csv.
-        grid (List[Dict]): All rows from grid_results.csv.
- 
-    Returns:
-        Path: Absolute path to saved energy_improvement_budget.pdf.
-    """
-    fig, ax = plt.subplots(figsize=(3.5, 2.5))
- 
-    # Determine shared x-axis upper limit (max trials across all methods).
-    n_max = max(len(bo), len(rand), len(grid))
- 
-    for method, rows in [("BO", bo), ("Random", rand), ("Grid", grid)]:
-        series = compute_energy_improvement_series(rows)
-        trials = list(range(1, len(series) + 1))
-        style  = METHOD_STYLES[method]
- 
-        # Replace NaN with None for matplotlib gap rendering.
-        # Matplotlib skips None points rather than drawing to them.
-        y_plot = [v if not math.isnan(v) else None for v in series]
- 
-        ax.plot(
-            trials, y_plot,
-            color     = style["color"],
-            linestyle = style["linestyle"],
-            marker    = style["marker"],
-            markersize  = 3,
-            markevery   = max(1, len(trials) // 8),
-            label       = style["label"],
-            zorder      = 3,
-        )
- 
-        # Annotate final improvement value (last non-NaN element).
-        final_val = next(
-            (v for v in reversed(series) if not math.isnan(v)), None
-        )
-        if final_val is not None:
-            x_last = len(series)
-            # Clamp annotation x so it does not overrun the right axis edge.
-            x_ann  = min(x_last + 0.3, n_max * 0.97)
-            ax.annotate(
-                f"{final_val:.1f}%",
-                xy       = (x_last, final_val),
-                xytext   = (x_ann,  final_val),
-                fontsize = 6.5,
-                color    = style["color"],
-                va       = "center",
-                ha       = "left",
-                arrowprops = dict(
-                    arrowstyle  = "-",
-                    color       = style["color"],
-                    lw          = 0.6,
-                    shrinkA     = 2,
-                    shrinkB     = 2,
-                ),
-                zorder = 5,
-            )
- 
-    ax.set_xlabel("Number of Evaluations (log scale)")
-    ax.set_ylabel("Energy Improvement (%)")
-    ax.set_title("Energy Improvement vs. Evaluation Budget")
-    # Log x-axis: Grid runs the full 972-config lattice while BO/Random run
-    # 30 — a linear axis crams BO/Random into an invisible sliver.
-    ax.set_xscale("log")
-    ax.set_xlim(left=1, right=n_max * 1.3)
-    ax.set_ylim(bottom=-2)     # small margin below 0% for visual clarity
-    ax.axhline(0, color="#cccccc", linewidth=0.8, zorder=1)   # 0% reference line
-    # Placed in the empty gap between BO/Random's 30-eval curves and Grid's
-    # 972-eval curve (log-scale x means this band is genuinely empty),
-    # rather than upper-left where it would cover BO's own annotation.
-    ax.legend(loc="center", bbox_to_anchor=(0.62, 0.42), framealpha=0.9, handlelength=2.5)
- 
-    out = FIGURES_DIR / "energy_improvement_budget.pdf"
-    fig.savefig(out)
-    plt.close(fig)
- 
-    # Log final improvement values for paper reporting.
-    for method, rows in [("BO", bo), ("Random", rand), ("Grid", grid)]:
-        s = compute_energy_improvement_series(rows)
-        final = next((v for v in reversed(s) if not math.isnan(v)), float("nan"))
-        logger.info(
-            f"Figure A | {METHOD_STYLES[method]['label']:<28} "
-            f"final_improvement={final:.2f}%  "
-            f"n_trials={len(rows)}"
-        )
- 
-    logger.info(f"Figure A saved: {out}")
-    return out
- 
- 
 def figure_feasible_discovery_rate(bo: List[Dict], rand: List[Dict],
                                    grid: List[Dict]) -> Path:
     """
@@ -753,11 +567,9 @@ def figure_feasible_discovery_rate(bo: List[Dict], rand: List[Dict],
     Scientific purpose:
         A steeper cumulative curve indicates the method discovers valid,
         deployable configurations more rapidly. This matters because:
-        (1) Early feasible hits provide the "first feasible energy"
-            reference used in figure_energy_improvement_budget().
-        (2) In a real deployment budget, more feasible options means
+        (1) In a real deployment budget, more feasible options means
             more choices in the accuracy–energy tradeoff.
-        (3) A method that wastes many evaluations on infeasible regions
+        (2) A method that wastes many evaluations on infeasible regions
             is less suited to constrained optimisation — exactly the
             regime this paper targets.
  
@@ -972,7 +784,6 @@ if __name__ == "__main__":
     # ── Generate SOO figures ───────────────────────────────────────────────────
     figure1_convergence(bo, rand, grid)
     figure2_comparison_bar(bo, rand, grid)
-    figure_energy_improvement_budget(bo, rand, grid) # Figure A
     figure_feasible_discovery_rate(bo, rand, grid)   # Figure B
 
     # ── Generate MOO figures (require moo_results.csv etc.) ───────────────────
@@ -1008,7 +819,6 @@ if __name__ == "__main__":
     outputs = [
         "convergence_curve.pdf",
         "comparison_bar.pdf",
-        "energy_improvement_budget.pdf",
         "feasible_discovery_rate.pdf",
         "table_main_results.tex",
     ]
@@ -1029,15 +839,6 @@ if __name__ == "__main__":
 
     print("\nLaTeX table snippet:")
     print("\n".join(table.split("\n")[6:12]))
-
-    print("\n── Figure A diagnostic (energy improvement) ─────────────────────")
-    for method, rows in [("BO", bo), ("Random", rand), ("Grid", grid)]:
-        s     = compute_energy_improvement_series(rows)
-        final = next((v for v in reversed(s) if not math.isnan(v)), float("nan"))
-        first_hit = next((i+1 for i, v in enumerate(s) if not math.isnan(v)), None)
-        print(f"  {METHOD_STYLES[method]['label']:<28} "
-              f"first_feasible_at_trial={first_hit}  "
-              f"final_improvement={final:.2f}%")
 
     print("\n── Figure B diagnostic (feasible discovery rate) ────────────────")
     for method, rows in [("BO", bo), ("Random", rand), ("Grid", grid)]:
