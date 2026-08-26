@@ -1,0 +1,44 @@
+Evaluation Pipeline
+
+Every candidate configuration proposed by the Bayesian Optimization algorithm is evaluated through a unified evaluation pipeline. The configuration specifies six decision variables: the number of neural network layers, width multiplier, quantization precision, scheduler time slice, scheduling priority, and DVFS scaling factor. For each configuration, the framework constructs the neural network architecture, estimates memory usage after quantization, predicts classification accuracy using an inverse-distance weighted interpolation model calibrated on experimentally measured configurations, estimates energy consumption using a FLOP-based energy model, and evaluates scheduling latency using a microprocessor scheduling simulator. The evaluation returns four metrics—accuracy, memory footprint, energy consumption, and latency—which are subsequently used by the optimization algorithm.
+
+
+We formulate the optimization problem as a constrained Bayesian Optimization task. The objective is to minimize estimated energy consumption while enforcing a minimum accuracy threshold. The search space consists of six design variables spanning both neural network architecture (number of layers, width multiplier, quantization precision) and scheduling parameters (time slice, task priority, and DVFS scaling factor). At each optimization iteration, the Bayesian optimizer proposes a candidate configuration, which is evaluated using the unified evaluation pipeline. The observed energy consumption and accuracy are then returned to update the surrogate model and guide subsequent sampling decisions.
+
+The evaluation pipeline computes four performance metrics: accuracy, memory usage, energy consumption, and scheduling latency. Among these, energy consumption serves as the optimization objective, while accuracy is enforced as a feasibility constraint. Memory and latency are recorded for analysis and comparison across configurations.
+
+x=(num_layers,width,bits,time_slice,priority,dvfs)
+
+earch Space. The optimization variable is defined as
+
+x=(L,W,Q,T,P,D)
+
+where:
+
+L: number of neural network layers
+W: width multiplier
+Q: quantization bit-width
+T: scheduler time slice
+P: task priority
+D: DVFS scaling factor
+
+The search space therefore combines discrete architectural decisions with continuous scheduling parameters, producing a mixed discrete–continuous optimization problem.
+
+Accuracy is estimated using an inverse-distance weighted surrogate calibrated from measured configurations.
+Energy is estimated using a FLOP-based proxy.
+Scheduler latency is obtained from simulation rather than physical hardware.
+All evaluations are deterministic under a fixed random seed.
+
+Bayesian Optimization was selected because the optimization problem consists of a mixed discrete–continuous search space spanning both neural network architecture and scheduling parameters. Unlike Grid Search, which requires discretization of continuous variables and performs exhaustive evaluation of predefined combinations, Bayesian Optimization can efficiently explore continuous parameter spaces while adapting future evaluations based on previously observed results. Random Search serves as a strong baseline because it uniformly samples the same search space; however, it does not exploit information gathered during earlier evaluations. In contrast, Bayesian Optimization constructs a probabilistic surrogate model that guides subsequent evaluations toward promising regions of the search space, enabling more sample-efficient optimization under a fixed evaluation budget. In our experiments, all optimization methods operate under identical search spaces, evaluation functions, and trial budgets to ensure a fair comparison.
+
+Performance Metrics. Four metrics are collected during evaluation: classification accuracy, memory footprint, energy consumption, and scheduling latency. These metrics capture the principal trade-offs encountered when deploying neural networks on resource-constrained embedded processors. Energy consumption serves as the optimization objective, accuracy is enforced as a feasibility constraint, while memory usage and latency are recorded for comparative analysis across candidate configurations.
+
+Expected Contributions
+
+• Joint optimization of neural network architecture and scheduling parameters.
+
+• Unified evaluation pipeline combining architecture construction, quantization, energy estimation and scheduler simulation.
+
+• Bayesian Optimization framework for energy-efficient microprocessor scheduling under accuracy constraints.
+
+• Experimental comparison against Grid Search and Random Search under identical evaluation budgets.
