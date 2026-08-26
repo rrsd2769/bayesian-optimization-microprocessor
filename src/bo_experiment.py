@@ -104,10 +104,6 @@ def run_bo_experiment(
    raw = evaluate(parameters)
    elapsed = time.perf_counter() - t0
    # Report back to Ax (updates GP surrogate)
-   #ax_client.complete_trial(
-    #trial_index = trial_id,
-    #raw_data = {k: (v, 0.0) for k, v in raw.items()},
-   #)
    ax_client.complete_trial(
     trial_index=trial_id,
     raw_data={
