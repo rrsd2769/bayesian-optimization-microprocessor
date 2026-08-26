@@ -102,8 +102,8 @@ def evaluate(config: dict) -> dict:
  _, memory_kb = apply_quantization(model, quant_bits)
  # Step 3: Accuracy from proxy
  accuracy = accuracy_proxy(num_layers, width_mult, quant_bits)
- # Step 4: Energy from FLOPs + DVFS
- energy_mj = estimate_energy_mj(stats["flops"], dvfs_factor)
+ # Step 4: Energy from FLOPs + DVFS + quantization bit-width
+ energy_mj = estimate_energy_mj(stats["flops"], dvfs_factor, quant_bits)
  # Step 5: Latency from scheduler simulation
  sched = run_scheduler_sim(config, flops=stats["flops"])
  latency_ms = sched["mean_latency_ms"]

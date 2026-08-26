@@ -50,7 +50,7 @@ def _make_tasks(rng, flops: int, dvfs_factor: float) -> List[Task]:
 range(SIM_NUM_TASKS)]
  return [Task(i, float(arrivals[i]), 0, task_flops[i]) for i in
 range(SIM_NUM_TASKS)]
-def _run_rr(env, cpu, tasks, result, time_slice_s, dvfs_factor):
+def _run_rr(env, cpu, tasks, result, time_slice_s, dvfs_factor, quant_bits):
  eff_clock = SIM_CLOCK_HZ * dvfs_factor
  for task in tasks:
   yield env.timeout(max(0, task.arrival_time - env.now))
@@ -64,9 +64,9 @@ def _run_rr(env, cpu, tasks, result, time_slice_s, dvfs_factor):
      remaining -= slice_f
    t.finish_time = env.now
    result.latencies_ms.append(t.latency_ms)
-   result.total_energy_mj += estimate_energy_mj(t.flops, dvfs_factor)
+   result.total_energy_mj += estimate_energy_mj(t.flops, dvfs_factor, quant_bits)
   env.process(rr_proc(task))
-def _run_priority(env, cpu, tasks, result, dvfs_factor):
+def _run_priority(env, cpu, tasks, result, dvfs_factor, quant_bits):
  eff_clock = SIM_CLOCK_HZ * dvfs_factor
  for task in tasks:
   yield env.timeout(max(0, task.arrival_time - env.now))
@@ -76,7 +76,7 @@ def _run_priority(env, cpu, tasks, result, dvfs_factor):
     yield env.timeout(t.flops / eff_clock)
     t.finish_time = env.now
    result.latencies_ms.append(t.latency_ms)
-   result.total_energy_mj += estimate_energy_mj(t.flops, dvfs_factor)
+   result.total_energy_mj += estimate_energy_mj(t.flops, dvfs_factor, quant_bits)
   env.process(pri_proc(task))
 def run_scheduler_sim(config: dict, flops: int) -> dict:
  """
@@ -93,16 +93,17 @@ num_tasks
  time_slice_ms = float(config["time_slice"])
  priority = int(config["priority"])
  dvfs_factor = float(config["dvfs_factor"])
+ quant_bits = int(config["quant_bits"])
  policy = "priority" if priority == 0 else "round_robin"
  tasks = _make_tasks(rng, flops, dvfs_factor)
  env = simpy.Environment()
  result = SimResult(policy, time_slice_ms, priority, dvfs_factor)
  if policy == "round_robin":
   cpu = simpy.Resource(env, capacity=1)
-  env.process(_run_rr(env, cpu, tasks, result, time_slice_ms/1000.0,dvfs_factor))
+  env.process(_run_rr(env, cpu, tasks, result, time_slice_ms/1000.0,dvfs_factor, quant_bits))
  else:
   cpu = simpy.PriorityResource(env, capacity=1)
-  env.process(_run_priority(env, cpu, tasks, result, dvfs_factor))
+  env.process(_run_priority(env, cpu, tasks, result, dvfs_factor, quant_bits))
  env.run()
  return result.to_dict()
 if __name__ == "__main__":
@@ -110,11 +111,11 @@ if __name__ == "__main__":
  BASELINE_FLOPS = 3_096_576
  print("\n=== Scheduler Simulation Validation ===\n")
  cases = [
-  ({"time_slice": 10.0, "priority": 1, "dvfs_factor": 1.0}, "RR full speed"),
-  ({"time_slice": 10.0, "priority": 1, "dvfs_factor": 0.75}, "RR 75%"),
-  ({"time_slice": 10.0, "priority": 1, "dvfs_factor": 0.5}, "RR 50%"),
-  ({"time_slice": 20.0, "priority": 0, "dvfs_factor": 1.0}, "Priority full"),
-  ({"time_slice": 50.0, "priority": 2, "dvfs_factor": 0.5}, "RR slow lowprio"),
+  ({"time_slice": 10.0, "priority": 1, "dvfs_factor": 1.0, "quant_bits": 32}, "RR full speed"),
+  ({"time_slice": 10.0, "priority": 1, "dvfs_factor": 0.75, "quant_bits": 32}, "RR 75%"),
+  ({"time_slice": 10.0, "priority": 1, "dvfs_factor": 0.5, "quant_bits": 32}, "RR 50%"),
+  ({"time_slice": 20.0, "priority": 0, "dvfs_factor": 1.0, "quant_bits": 32}, "Priority full"),
+  ({"time_slice": 50.0, "priority": 2, "dvfs_factor": 0.5, "quant_bits": 32}, "RR slow lowprio"),
  ]
  print(f"{'Config':<25} {'Latency(ms)':<14} {'Energy(mJ)':<14} {'Thruput'}")
  print("-" * 70)
@@ -123,9 +124,15 @@ if __name__ == "__main__":
   print(f"{desc:<25} {r['mean_latency_ms']:<14.4f} {r['energy_mj']:<14.4f} {r['throughput_tps']:.2f}")
  # Sanity: lower DVFS → lower energy AND higher latency
   r_full = run_scheduler_sim({"time_slice": 10.0, "priority": 1,
-"dvfs_factor": 1.0}, BASELINE_FLOPS)
+"dvfs_factor": 1.0, "quant_bits": 32}, BASELINE_FLOPS)
   r_half = run_scheduler_sim({"time_slice": 10.0, "priority": 1,
-"dvfs_factor": 0.5}, BASELINE_FLOPS)
+"dvfs_factor": 0.5, "quant_bits": 32}, BASELINE_FLOPS)
   assert r_half["energy_mj"] < r_full["energy_mj"], "FAIL: lower DVFS should reduce energy"
   assert r_half["mean_latency_ms"] > r_full["mean_latency_ms"], "FAIL: lower DVFS should increase latency"
-print("\nSanity checks: PASSED ✓") 
+ # Sanity: lower quant_bits → lower energy, latency unaffected (bits don't change clock cycles)
+  r_bits32 = run_scheduler_sim({"time_slice": 10.0, "priority": 1,
+"dvfs_factor": 1.0, "quant_bits": 32}, BASELINE_FLOPS)
+  r_bits8 = run_scheduler_sim({"time_slice": 10.0, "priority": 1,
+"dvfs_factor": 1.0, "quant_bits": 8}, BASELINE_FLOPS)
+  assert r_bits8["energy_mj"] < r_bits32["energy_mj"], "FAIL: lower quant_bits should reduce energy"
+print("\nSanity checks: PASSED ✓")
