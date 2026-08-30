@@ -1,0 +1,79 @@
+% ------------------------------------------------------------------
+% Fig. 1 -- Deterministic evaluation pipeline: one configuration x
+% mapped to the four paper metrics. Styles are defined in main.tex.
+% ------------------------------------------------------------------
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[node distance=4mm]
+
+% ---------- Column 1: the configuration -------------------------
+\node[parambox, minimum width=17mm] (arch)
+     {\textbf{Architecture}\\[1pt] $L\!\in\!\{2,3,4\}$\\ $w\!\in\![0.25,1]$\\ $b\!\in\!\{4,8,16,32\}$};
+\node[parambox, minimum width=17mm, below=7mm of arch] (sched)
+     {\textbf{Scheduling}\\[1pt] $\tau\!\in\![5,50]$\,ms\\ $\pi\!\in\!\{0,1,2\}$\\ $\delta\!\in\![0.5,1]$};
+
+\node[grp, fit=(arch)(sched), label={[font=\scriptsize\bfseries]above:$\mathbf{x}\in\mathcal{X}\subset\mathbb{R}^{6}$}] (cfg) {};
+
+% ---------- Column 2: structural model --------------------------
+\node[modelbox, right=11mm of arch, minimum width=21mm] (builder)
+     {\textsc{ConfigurableCNN}\\ builder\\[1pt] $\rightarrow P(L,w),\;F(L,w)$};
+\node[modelbox, right=11mm of sched, minimum width=21mm] (simsetup)
+     {Task generator\\[1pt] 50 tasks, Poisson\\ arrivals ($\bar{t}_a\!=\!0.2$\,s)};
+
+% ---------- Column 3: the four models ---------------------------
+\node[modelbox, right=12mm of builder, yshift=11mm, minimum width=24mm] (acc)
+     {\textbf{Accuracy surrogate}\\[1pt] $a+b\ln L+c\ln w$};
+\node[modelbox, right=12mm of builder, yshift=-1mm, minimum width=24mm] (mem)
+     {\textbf{Memory model}\\[1pt] $P\cdot b/8$};
+\node[modelbox, right=12mm of builder, yshift=-13mm, minimum width=24mm] (eng)
+     {\textbf{Energy model}\\[1pt] $F V^{2}C\,\delta\,(b/32)$};
+\node[modelbox, right=12mm of simsetup, yshift=-9mm, minimum width=24mm] (lat)
+     {\textbf{Scheduler simulation}\\[1pt] SimPy DES, 120\,MHz\,$\cdot\,\delta$};
+
+% ---------- Column 4: metrics -----------------------------------
+\node[metricbox, right=11mm of acc, minimum width=15mm] (macc) {$\mathrm{acc}(\mathbf{x})$};
+\node[metricbox, right=11mm of mem, minimum width=15mm] (mmem) {$\mathrm{mem}(\mathbf{x})$};
+\node[metricbox, right=11mm of eng, minimum width=15mm] (meng) {$E(\mathbf{x})$};
+\node[metricbox, right=11mm of lat, minimum width=15mm] (mlat) {$\ell(\mathbf{x})$};
+
+% ---------- Feasibility ----------------------------------------
+\node[decision, right=9mm of mmem, yshift=-6mm, minimum width=15mm] (feas)
+     {feasible?};
+
+% ---------- Edges ----------------------------------------------
+\draw[flow] (arch.east)  -- (builder.west);
+\draw[flow] (sched.east) -- (simsetup.west);
+
+\draw[flow] (builder.east) -- (acc.west) node[lbl, midway] {$L,w$};
+\draw[flow] (builder.east) -- (mem.west) node[lbl, midway] {$P$};
+\draw[flow] (builder.east) -- (eng.west) node[lbl, midway] {$F$};
+\draw[flow] (simsetup.east) -- (lat.west);
+
+% quantisation bit-width feeds memory + energy; dvfs feeds energy + sim
+\draw[flowdash] (cfg.south) .. controls +(0,-9mm) and +(0,-9mm) .. (eng.south)
+      node[lbl, pos=0.55] {$b,\delta$};
+\draw[flowdash] (builder.south) .. controls +(0,-6mm) and +(180:8mm) .. (lat.west)
+      node[lbl, pos=0.3] {$F$};
+
+\draw[flow] (acc.east) -- (macc.west);
+\draw[flow] (mem.east) -- (mmem.west);
+\draw[flow] (eng.east) -- (meng.west);
+\draw[flow] (lat.east) -- (mlat.west);
+
+\draw[flow] (macc.east) .. controls +(6mm,0) and +(0,10mm) .. (feas.north)
+      node[lbl, pos=0.75] {$\geq\!0.75$};
+\draw[flow] (mlat.east) .. controls +(6mm,0) and +(0,-10mm) .. (feas.south)
+      node[lbl, pos=0.75] {$\leq\!100$\,ms};
+
+\end{tikzpicture}
+\caption{Deterministic evaluation pipeline. A single configuration
+$\mathbf{x}$ is decomposed into three architecture and three scheduling
+parameters. Architecture parameters determine the parameter count $P$ and
+multiply--accumulate count $F$ once (results are cached); these feed the
+accuracy, memory and energy models. The scheduling parameters together with
+$F$ drive a SimPy discrete-event simulation of a 120\,MHz ARM Cortex-M4,
+yielding mean latency. Only accuracy and latency participate in the
+feasibility test; memory is reported but never constrained. The whole
+pipeline is deterministic and costs $\approx 3$\,ms per call.}
+\label{fig:pipeline}
+\end{figure*}

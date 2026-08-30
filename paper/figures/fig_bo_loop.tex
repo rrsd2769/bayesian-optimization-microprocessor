@@ -1,0 +1,67 @@
+% ------------------------------------------------------------------
+% Fig. 1 -- The search loop, in plain terms.
+% ------------------------------------------------------------------
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}
+
+\node[box, fill=blue!6, draw=blue!55, minimum width=52mm] (sobol) at (0,0)
+     {\textbf{Start}\\[1pt]
+      12 designs, spread evenly across the space};
+
+\node[box, below=4mm of sobol, minimum width=52mm] (data)
+     {Everything tried so far, with its four measurements};
+
+\node[modelbox, below=4mm of data, minimum width=52mm] (gp)
+     {\textbf{Fit a statistical model}\\[1pt]
+      one per metric: predicts a value \emph{and} a confidence\\
+      for any design not yet tried};
+
+\node[box, fill=orange!8, draw=orange!65, below=9mm of gp,
+      xshift=-14mm, minimum width=24mm] (soo)
+     {\textbf{Single goal}\\[1pt] lowest energy,\\ accuracy $\geq 75\%$};
+\node[box, fill=orange!8, draw=orange!65, below=9mm of gp,
+      xshift=14mm, minimum width=24mm] (moo)
+     {\textbf{Two goals}\\[1pt] accuracy \emph{and} energy,\\
+      latency $\leq 100$\,ms};
+
+\node[box, below=6mm of soo, xshift=14mm, minimum width=52mm] (cand)
+     {Pick the most promising design not yet tried};
+
+\node[metricbox, below=4mm of cand, minimum width=52mm] (eval)
+     {\textbf{Evaluate it} ($\approx 3$\,ms)\\[1pt]
+      accuracy, memory, energy, latency};
+
+\node[decision, below=4mm of eval, minimum width=20mm] (budget)
+     {budget\\used up?};
+
+\node[metricbox, below=5mm of budget, minimum width=52mm] (out)
+     {\textbf{Result}\\[1pt]
+      one goal: the single best design\\
+      two goals: a set of trade-offs};
+
+\draw[flow] (sobol) -- (data);
+\draw[flow] (data)  -- (gp);
+\draw[flow] (gp.south) -- ++(0,-3mm) -| (soo.north);
+\draw[flow] (gp.south) -- ++(0,-3mm) -| (moo.north);
+\draw[flow] (soo.south) |- ([yshift=2.5mm]cand.north);
+\draw[flow] (moo.south) |- ([yshift=2.5mm]cand.north);
+\draw[flow] (cand) -- (eval);
+\draw[flow] (eval) -- (budget);
+\draw[flow] (budget) -- node[lbl, right, pos=0.4] {yes} (out);
+
+\draw[flow] (budget.west) -- ++(-21mm,0)
+      node[lbl, above, pos=0.75] {no}
+      |- (data.west);
+\node[lbl, rotate=90, align=center] at ([xshift=-4mm]gp.west)
+     {add the result,\\refit};
+
+\end{tikzpicture}
+\caption{The search loop. Both versions of the problem share the same
+starting points, the same model and the same evaluation; they differ only
+in what counts as a good answer. The first 12 designs are chosen without
+using the model at all, so any comparison made at a budget of 12 or fewer
+evaluations is comparing two ways of sampling blindly, not the method
+itself.}
+\label{fig:boloop}
+\end{figure}
