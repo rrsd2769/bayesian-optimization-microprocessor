@@ -36,15 +36,19 @@ float]:
   size_kb = _param_size_kb(model, bits=16)
   return model, size_kb
  elif quant_bits == 8:
+  # Size is computed from the pre-quantization model: quantize_dynamic packs
+  # nn.Linear weights into modules whose tensors no longer appear in
+  # .parameters(), which would silently drop them from the count.
+  size_kb = _param_size_kb(model, bits=8)
   q_model = torch.quantization.quantize_dynamic(
    model, {nn.Linear}, dtype=torch.qint8)
-  size_kb = _param_size_kb(q_model,bits=8)
   return q_model, size_kb
  elif quant_bits == 4:
-  # Approximation: INT8 with halved size estimate
+  # Approximation: INT8 arithmetic with a 4-bit size estimate. As above, the
+  # count must be taken before quantize_dynamic packs the Linear layers.
+  size_kb = _param_size_kb(model, bits=4)
   q_model = torch.quantization.quantize_dynamic(
    model, {nn.Linear}, dtype=torch.qint8)
-  size_kb = _param_size_kb(q_model,bits=4)
   return q_model, round(size_kb, 2)
  else:
   raise ValueError(f"quant_bits must be 4, 8, 16, or 32. Got:{quant_bits}")
