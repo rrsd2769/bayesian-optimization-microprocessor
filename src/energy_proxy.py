@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from config import SIM_VOLTAGE, SIM_CAPACITANCE, LOG_FORMAT
 logger = logging.getLogger(__name__)
 VOLTAGE = SIM_VOLTAGE # 3.3 V
-CAPACITANCE = SIM_CAPACITANCE # 1e-9 F
+CAPACITANCE = SIM_CAPACITANCE # 1e-12 F
 FULL_PRECISION_BITS = 32
 def estimate_energy_mj(flops: int, dvfs_factor: float, quant_bits: int,
  voltage: float = VOLTAGE, capacitance: float =
