@@ -4,3 +4,5 @@ __pycache__/
 venv/
 data/
 logs/*.log
+# LaTeX build artifacts
+paper/build/

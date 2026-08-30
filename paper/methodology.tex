@@ -1,0 +1,495 @@
+%=============================================================
+% METHODOLOGY
+%=============================================================
+
+\section{Problem Formulation}
+\label{sec:formulation}
+
+\subsection{What We Choose}
+
+We want to run a small image-recognition network on a low-power
+microcontroller. Two sets of decisions govern how well that goes: the shape
+of the network itself, and the settings of the operating system that runs
+it. We optimize both together.
+
+A candidate design is described by six numbers, listed in
+Table~\ref{tab:space}:
+\begin{equation}
+\mathbf{x} = (L,\; w,\; b,\; \tau,\; \pi,\; \delta) \in \mathcal{X}.
+\end{equation}
+The first three describe the network --- how many convolutional blocks it
+has ($L$), how many channels each block gets ($w$, a multiplier applied
+uniformly), and how many bits each weight is stored in ($b$). The last three
+describe the runtime --- how long a task holds the processor before being
+interrupted ($\tau$), which scheduling policy is used ($\pi$), and how fast
+the clock runs ($\delta$, where $1.0$ is full speed).
+
+\begin{table}[t]
+\centering
+\caption{The six settings we optimize. Three of them ($w$, $\tau$, $\delta$)
+are continuous, so the space cannot be searched exhaustively by trying every
+value.}
+\label{tab:space}
+\begin{tabular}{llll}
+\toprule
+Symbol & What it controls & Type & Range \\
+\midrule
+$L$      & depth (conv.\ blocks)   & choice     & $\{2,3,4\}$ \\
+$w$      & width multiplier        & continuous & $[0.25,\,1.0]$ \\
+$b$      & bits per weight         & choice     & $\{4,8,16,32\}$ \\
+$\tau$   & time slice (ms)         & continuous & $[5.0,\,50.0]$ \\
+$\pi$    & scheduling policy       & choice     & $\{0,1,2\}$ \\
+$\delta$ & clock speed factor      & continuous & $[0.5,\,1.0]$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+These two halves are normally decided by different people at different
+stages, but they interact. Storing weights in fewer bits changes how much
+arithmetic the processor must perform, which changes how long each task
+occupies the CPU. Slowing the clock saves energy but makes everything take
+longer, which eats into the time budget the network must fit inside. Fixing
+one half and then tuning the other discards part of the solution before the
+search begins.
+
+\subsection{What We Measure}
+
+Each design is mapped to four numbers: predicted top-1 accuracy
+$\mathrm{acc}(\mathbf{x})$, memory footprint $\mathrm{mem}(\mathbf{x})$ in
+KB, energy per inference $E(\mathbf{x})$ in mJ, and mean latency
+$\ell(\mathbf{x})$ in ms measured under contention --- that is, including
+time spent waiting in a queue, not just time spent computing.
+Section~\ref{sec:pipeline} describes how each is obtained.
+
+\subsection{When a Design Is Acceptable}
+
+A design is \emph{feasible} if it clears two bars at once: it must be
+accurate enough to be useful, and fast enough to be real-time.
+\begin{equation}
+\label{eq:feasible}
+\mathcal{F} = \bigl\{\mathbf{x}\in\mathcal{X} \;:\;
+\mathrm{acc}(\mathbf{x}) \geq 0.75 \;\wedge\;
+\ell(\mathbf{x}) \leq 100\ \mathrm{ms}\bigr\}.
+\end{equation}
+Anything failing either test is rejected regardless of how good it looks on
+the other.
+
+The 100\,ms budget is a choice we made, not a physical constant, so we
+checked whether the conclusions depend on it. At budgets of 50, 100 and
+200\,ms the share of the space that is feasible is $13.2\%$, $29.0\%$ and
+$41.5\%$, and the best achievable score moves smoothly with it ($0.0141$,
+$0.0168$, $0.0187$) with no sudden jump. Nothing in this paper depends on
+the specific value 100.
+
+Memory is measured and reported but is never used as a constraint. This is a
+simplification, and not a claim that memory is slack: the largest design in
+the space ($L=4$, $w=1.0$, $b=32$) needs $1{,}652.7$\,KB, which does not fit
+the 512\,KB RAM of the target class of device, and of the $264$ designs on
+the lattice of Sec.~\ref{sec:setup} that satisfy \eqref{eq:feasible}, $18$
+exceed that budget. What justifies leaving the constraint out is that it
+would not change the answer. Every design in the reference set of
+Sec.~\ref{sec:reffront} uses 4-bit weights and occupies at most
+$129.2$\,KB, so imposing a 512\,KB limit would remove only designs that were
+already worse on both goals. We state the omission rather than let a reader
+assume the whole space fits on the device, and return to it in
+Sec.~\ref{sec:threats}.
+
+\subsection{Two Versions of the Problem}
+
+We study two problems over the same space and the same evaluation pipeline.
+
+\paragraph{One goal}
+Find the design that uses the least energy while still being acceptable:
+\begin{equation}
+\label{eq:soo}
+\min_{\mathbf{x}\in\mathcal{X}} \; E(\mathbf{x})
+\quad \text{s.t.} \quad
+\mathrm{acc}(\mathbf{x}) \geq 0.75, \;\;
+\ell(\mathbf{x}) \leq 100\ \mathrm{ms}.
+\end{equation}
+
+\paragraph{Two goals}
+Find the designs that balance accuracy against energy:
+\begin{equation}
+\label{eq:moo}
+\max_{\mathbf{x}\in\mathcal{X}} \; \bigl(\mathrm{acc}(\mathbf{x}),\; -E(\mathbf{x})\bigr)
+\quad \text{s.t.} \quad
+\ell(\mathbf{x}) \leq 100\ \mathrm{ms}.
+\end{equation}
+
+The two-goal version is the headline. There is no single best answer to it,
+because a more accurate network costs more energy. Its output is instead a
+\emph{set} of designs in which no member can be improved on one goal without
+giving up ground on the other --- a \emph{Pareto front}. That set is what an
+engineer actually wants: a menu of sensible trade-offs to choose from.
+
+The distinction between the two is not cosmetic. Problem~\eqref{eq:soo} has
+a single scalar objective, so a working optimizer converges to one point and
+stops spreading out. The converged cluster from such a run is \emph{not} a
+Pareto front, and presenting it as one flatters an unguided random search,
+which keeps wandering and therefore appears to cover more of the objective
+space. An earlier version of this pipeline made exactly that mistake.
+Problem~\eqref{eq:moo} targets the trade-off directly, and its output is a
+front by construction.
+
+
+\section{How Each Design Is Evaluated}
+\label{sec:pipeline}
+
+Training a real network takes hours, and the search needs thousands of
+evaluations. Each of the four metrics is therefore computed by a fast model
+instead, and a complete evaluation takes about $3$\,ms. That speed is what
+makes both exhaustive enumeration and multi-seed replication affordable.
+Below we give each model and state honestly what it does and does not
+capture.
+
+\subsection{The Network and How It Was Trained}
+\label{sec:network}
+
+The architecture is a plain convolutional stack, chosen so that $L$ and $w$
+move it along two clean axes rather than through a complicated space of
+cell designs. Each of the $L$ blocks is
+Conv\,$3\!\times\!3$ (padding 1, no bias) $\to$ BatchNorm $\to$ ReLU $\to$
+MaxPool\,$2\!\times\!2$. Block $i$ produces $\max(4, \lfloor c_i w \rfloor)$
+channels, where the base widths are $(c_1,\dots,c_4) = (32, 64, 128, 256)$;
+the floor of four channels stops the narrowest designs from collapsing.
+Every block halves the image in both directions, so a $32\!\times\!32$
+CIFAR-10 input leaves the stack at $32/2^{L}$ pixels per side. A global
+average pool then reduces whatever remains to a single value per channel,
+which lets one classifier head serve every depth: Flatten $\to$
+Linear$(C_L, 128)$ $\to$ ReLU $\to$ Dropout$(0.3)$ $\to$ Linear$(128, 10)$,
+where $C_L$ is the last block's channel count.
+
+Across the space, parameter counts run from $4{,}882$ at $(L,w) = (2,0.25)$
+to $423{,}082$ at $(4,1.0)$ --- a factor of $87$. The classifier head is a
+large share of the small designs ($71\%$ of parameters at $(2,0.25)$) and a
+small share of the large ones ($8\%$ at $(4,1.0)$), which matters for how
+quantization is accounted in Sec.~\ref{sec:memory}.
+
+\emph{Training.} Every network used as ground truth was trained from scratch
+on CIFAR-10 for 50 epochs with Adam (learning rate $10^{-3}$, weight decay
+$10^{-4}$), batch size 128, cross-entropy loss and a cosine-annealing
+learning-rate schedule across the full 50 epochs. Training images are
+augmented with random $32\!\times\!32$ crops taken from 4-pixel zero padding
+and random horizontal flips, then normalised per channel; test images are
+normalised only. The best-accuracy checkpoint is kept. The recipe is
+identical for every architecture, so accuracy differences reflect $(L,w)$
+and not per-model tuning.
+
+\subsection{Accuracy}
+\label{sec:surrogate}
+
+Retraining a network at every iteration is the dominant cost in
+conventional architecture search. We avoid it by fitting a formula to a
+small number of real measurements, following the practice of
+regression-based deployment profiling \cite{mazumder2024regtune}.
+
+\emph{The measurements.} Six architectures spanning the corners and centre
+of the $(L,w)$ box were trained from scratch, and each was then evaluated at
+all four bit-widths, giving $6\times4=24$ measured accuracies.
+
+\emph{The formula.} Those measurements collapse to six architecture targets,
+to which we fit by ordinary least squares
+\begin{equation}
+\label{eq:scalinglaw}
+\widehat{\mathrm{acc}}(L,w) \;=\; a + b_{1}\ln L + c_{1}\ln w ,
+\end{equation}
+obtaining $a = 0.4449$, $b_1 = 0.3263$ and $c_1 = 0.1021$.
+
+In words: start from a base of roughly $44\%$, then add a contribution for
+depth and a contribution for width. The natural logarithm encodes
+\emph{diminishing returns} --- doubling the depth does not double the
+accuracy, it adds a fixed amount, and doubling again adds the same amount
+again. This shape is standard in the literature on how network performance
+scales with size. Both coefficients are positive, so the formula always says
+that deeper and wider is better. That is deliberate: a formula with bumps
+and dips in it would create false peaks that a Gaussian process would
+faithfully chase, wasting the budget on artifacts of the fit. Predictions
+are clipped to $[0.40, 0.95]$, and we claim the formula valid only inside
+$L\in[2,4]$, $w\in[0.25,1.0]$.
+
+\emph{How far to trust it.} We report held-out error rather than fit
+quality. Fitting three constants to six points gives $R^2 = 0.986$ and an
+in-sample error of $1.37$ percentage points (pp), but a good in-sample
+number there is close to guaranteed and tells a reader very little. So we
+removed each point in turn, refitted without it, and predicted it. That
+gives an error of $2.40$\,pp, with a worst case of $3.82$\,pp. The gap
+between the two ($\approx1.75\times$) is the honest measure of overfitting,
+and \textbf{$2.40$\,pp is the error bar that belongs on every accuracy
+number in this paper}. A power-law alternative was also fitted and rejected;
+it was four times worse ($9.75$\,pp held-out, $21.4$\,pp at worst). This
+formula also replaced an inverse-distance-weighting interpolant that was
+non-monotone on a dense width sweep.
+
+\emph{Bit-width is treated as having no effect.} Across all six
+architectures, changing $b$ over $\{4,8,16,32\}$ moved measured accuracy by
+at most $0.30$\,pp --- an order of magnitude below our own $2.40$\,pp error
+bar. We therefore fit accuracy from architecture alone rather than fitting
+noise as if it were signal. The claim is bounded by the procedure that
+produced it: the quantization described next compresses only the classifier
+head, so this is evidence about \emph{that} procedure and not a general
+claim that 4-bit networks are free.
+
+\subsection{Quantization and Memory}
+\label{sec:memory}
+
+\emph{What is actually done.} Quantization is applied after training. At
+$b=32$ the network is left alone. At $b=16$ weights are cast to half
+precision. At $b=8$ we apply dynamic quantization to the \texttt{Linear}
+layers, giving 8-bit weights with float activations converted on the fly. At
+$b=4$ the network that runs is the same 8-bit model; only the size
+accounting is halved. We say this plainly because it is an approximation and
+not a 4-bit kernel: nothing in our stack executes at 4-bit precision, and
+$b=4$ should be read as \emph{a 4-bit storage budget evaluated with 8-bit
+arithmetic}.
+
+Two consequences follow, and both cut against us rather than for us. The
+convolutional weights --- between $29\%$ and $92\%$ of all parameters
+depending on $(L,w)$ --- are never compressed in the executed model, so our
+procedure is considerably milder than compressing the whole network. And the
+bit-width neutrality reported above is a property of this restricted
+procedure, not of quantization in general.
+
+\emph{The footprint.} Memory is the nominal storage of the weights at the
+target bit-width:
+\begin{equation}
+\label{eq:memory}
+\mathrm{mem}(\mathbf{x}) \;=\; P(L,w)\cdot b \,/\, 8 \ \ \text{bytes},
+\end{equation}
+where $P(L,w)$ is the network's parameter count. In words: count every
+weight, multiply by how many bits each one occupies, divide by eight to
+convert bits to bytes.
+
+We compute \eqref{eq:memory} arithmetically from $P(L,w)$ rather than by
+measuring the compressed object, for a concrete reason: the dynamically
+quantized layers no longer expose their weights as parameters, so measuring
+them omits the classifier head entirely and undercounts the footprint --- by
+up to $246\%$ on the narrowest designs. Equation~\eqref{eq:memory} is still
+idealised, in that it charges every weight at the nominal width and ignores
+packing overhead, scales and zero-points, but it is idealised the same way
+everywhere in the space. Memory enters neither the goals nor the feasibility
+test, so it affects only the reported footprint and never the search.
+
+\subsection{Energy}
+\label{sec:energy}
+
+Energy per inference is modelled from how CMOS chips consume power. For a
+workload of $F(L,w)$ multiply--accumulate operations,
+\begin{equation}
+\label{eq:energy}
+E(\mathbf{x}) \;=\; F(L,w)\cdot V^{2} C \cdot \delta \cdot \frac{b}{32},
+\end{equation}
+with supply voltage $V = 3.3$\,V and an effective switched capacitance per
+operation $C = 1\!\times\!10^{-12}$\,F.
+
+Term by term: more arithmetic costs proportionally more energy; $V^2C$ is
+the physics, since every switching operation charges a small capacitance
+through the supply voltage and the energy that costs grows with the square
+of the voltage; $\delta$ says a slower clock uses less energy; and $b/32$
+says a 4-bit multiplier is physically smaller than a 32-bit one and switches
+less silicon, so it costs proportionally less. At $b=32$ that last factor is
+$1$, meaning no discount.
+
+\emph{Why the clock term is defensible.} The dependence on $\delta$ needs an
+explicit justification, because the textbook derivation does not supply one.
+Writing dynamic power as $P = \alpha C V^{2} f$ and execution time as
+$t = F/f$ gives $E = Pt = \alpha C V^{2} F$: the frequency cancels
+identically. That derivation predicts clock speed has \emph{no} effect on
+energy at all, and so cannot defend a linear term or a quadratic one.
+
+We therefore use the standard speed-polynomial model from the energy-aware
+scheduling literature \cite{bambagini2016energy}. Writing normalised
+processor speed as $s = f/f_{\max}$, power is modelled as
+$P(s) = \beta s^{\alpha}$ with $2 \leq \alpha \leq 3$. For a fixed amount of
+work $t \propto 1/s$, so energy per inference scales as
+\begin{equation}
+\label{eq:alpha}
+E \;\propto\; s^{\alpha - 1}.
+\end{equation}
+We take $\alpha = 2$, which gives $E \propto \delta$, exactly the form used
+in \eqref{eq:energy}. This is the pessimistic end of the accepted range:
+$\alpha = 3$ would give $E \propto \delta^{2}$ and make clock scaling look
+roughly twice as profitable. We deliberately chose the assumption that makes
+the parameter we are optimizing look less useful than it might be.
+
+\subsection{Latency}
+
+The other three metrics are formulas. This one is a simulation, because
+queueing cannot be captured by a formula.
+
+We simulate a single-core 120\,MHz ARM Cortex-M4 running at an effective
+clock of $120\,\mathrm{MHz} \cdot \delta$. Fifty inference requests arrive
+at random times, averaging one every $0.2$\,s, and each one's operation
+count is jittered by $\pm5\%$ so that no two are identical. The scheduler
+decides which request holds the processor. We report the mean latency across
+the fifty requests.
+
+The reason to simulate rather than calculate is that with one core and
+randomly timed arrivals, requests \emph{queue behind each other}. Latency is
+the computation plus the waiting, and only a simulation produces the second
+part.
+
+The policy selector maps as $\pi = 0 \mapsto$ priority scheduling and
+$\pi \in \{1,2\} \mapsto$ round-robin with time slice $\tau$; the time slice
+is read only on the round-robin branch. We record this explicitly because
+the mapping is not one-to-one --- $\pi=1$ and $\pi=2$ do exactly the same
+thing --- and that degeneracy is what makes the enumeration of
+Sec.~\ref{sec:reffront} possible. It has a second consequence worth stating:
+all fifty requests are submitted at equal priority, so the priority branch
+has nothing to discriminate on and behaves as first-come-first-served.
+
+
+\section{How We Search}
+\label{sec:method}
+
+\input{figures/fig_bo_loop}
+
+The space is infinite in three of its six dimensions and every evaluation
+costs something, so we search it with Bayesian optimization, through the Ax
+platform on a BoTorch backend. Fig.~\ref{fig:boloop} shows the loop.
+
+\subsection{The Idea}
+
+Rather than guessing randomly or trying everything, the method keeps a
+running statistical picture of what it believes the accuracy and energy
+surfaces look like, given everything tried so far. For any design not yet
+tried, that picture supplies both a prediction and a confidence. The method
+then chooses what to try next by balancing two competing pulls: trying
+somewhere the model expects to be good, and trying somewhere the model is
+uncertain, because that is where a surprise might be hiding. Each result is
+added, the picture is refitted, and the cycle repeats.
+
+\subsection{Starting Points}
+
+Every run begins with $n_0 = 2d = 12$ designs drawn from a scrambled Sobol
+sequence --- a pattern that spreads points evenly rather than letting them
+clump as uniform random sampling does. Only after those twelve does the
+model take over.
+
+We state this explicitly because it governs how budget-matched comparisons
+must be read. At a budget of twelve evaluations or fewer, a comparison
+against uniform random search contrasts two ways of sampling blindly and
+says nothing about Bayesian optimization. Only budgets beyond twelve contain
+model-guided trials.
+
+\subsection{The Model and the Choice Rule}
+
+An independent \textsc{SingleTaskGP} is fitted to each metric. Because the
+evaluation pipeline is deterministic, results are reported to the optimizer
+with zero uncertainty attached.
+
+For the one-goal problem \eqref{eq:soo} we use the log-transformed noisy
+expected improvement rule, $q$LogNEI, with the accuracy floor supplied as a
+constraint. For the two-goal problem \eqref{eq:moo} we use log-transformed
+noisy expected hypervolume improvement, $q$LogNEHVI, with the latency budget
+as a constraint. We name both precisely because these log-transformed
+variants are what the toolchain actually runs, and they behave differently
+in practice from the plain versions they descend from
+\cite{daulton2021nehvi,ament2023logei}: the log transform keeps a usable
+gradient in regions where the chance of improvement is otherwise too small
+to represent.
+
+Constraints are handled inside the choice rule rather than by discarding
+failures afterwards, so an infeasible design still teaches the model where
+the boundary lies.
+
+
+\section{Experimental Setup}
+\label{sec:setup}
+
+\subsection{What We Compare Against}
+
+Two baselines share the search space, the evaluation pipeline and the
+definition of feasibility with the proposed method, so that every comparison
+is like-for-like.
+
+\emph{Grid search} evaluates every combination on a regular lattice of
+$3\times3\times4\times3\times3\times3 = 972$ designs. It is exhaustive over
+that lattice rather than a sample of it, which means that for the one-goal
+problem it finds the lattice's best answer by definition. \emph{Random
+search} samples the space uniformly at a matched number of evaluations.
+
+\subsection{Budgets and Repetition}
+
+The one-goal comparison gives our method and random search 30 evaluations
+each, against grid search's 972. The two-goal comparison gives our method
+and its random counterpart 100 evaluations each.
+
+For repetition across seeds we use two separate sweeps, because the two-goal
+choice rule becomes more expensive per trial as the discovered front grows
+--- it decomposes the covered region into boxes at every step --- which
+makes a 30-seed, 100-trial two-goal sweep impractical. The primary sweep
+therefore uses 15 seeds at 20 trials; the secondary one-goal sweep uses 30
+seeds at 30 trials. The two are reported separately and never pooled.
+
+\subsection{The Best Possible Answer}
+\label{sec:reffront}
+
+Comparing methods against each other tells you which is better. It does not
+tell you whether either is any good. We therefore computed the true best
+achievable answer by brute force, following the argument for absolute rather
+than relative assessment in multi-objective benchmarking
+\cite{lu2024nasmoo}. Fig.~\ref{fig:reffront} shows the procedure.
+
+\input{figures/fig_reference_front}
+
+This is normally impossible in a continuous space. It became possible here
+because of a property of the space itself: the two scheduling settings do
+not independently matter. The policy selector sends $\pi=1$ and $\pi=2$ down
+the same branch, and $\tau$ is ignored on the other branch. Neither enters
+the accuracy, memory or energy models at all --- both touch only latency. We
+can therefore handle them analytically, giving each combination of the other
+four settings its best achievable latency across all scheduling choices, and
+enumerate what remains on a dense lattice of
+$3\times151\times4\times51 = 92{,}412$ designs. Doing so required
+$207{,}927$ scheduler simulations and $248$\,s.
+
+Keeping only those with $\ell \leq 100$\,ms leaves $26{,}820$ designs
+($29.0\%$), whose best-trade-off subset is a $108$-design reference set
+$\mathcal{P}^{\star}$ scoring $0.016821$. This is the ceiling against which
+every method is measured, and it converts our headline score from a relative
+number into a fraction of a known optimum.
+
+We disclose the degeneracy of $\tau$ and $\pi$ as a real limitation of the
+simulator, revisited in Sec.~\ref{sec:threats}, rather than presenting the
+scheduling dimensions as fully exercised. Here it happened to be what made
+exact enumeration possible.
+
+\subsection{How a Front Is Scored}
+
+We report two numbers. \emph{Hypervolume} (HV) measures how much of the
+objective space a set of designs covers and dominates --- bigger is better.
+It is computed from a fixed corner point at
+$(\mathrm{acc}, E) = (0.70,\ 0.10\ \mathrm{mJ})$, chosen so that every
+feasible design beats it, and held identical across every method, seed and
+budget, because hypervolumes measured from different corners are not
+comparable. \emph{Inverted generational distance} (IGD) is the average
+distance from the reference set to the set a method found --- smaller is
+better. It rewards getting close and covering the whole range, rather than
+bunching up in one corner.
+
+Both are always reported from the same run. HV and IGD quoted together come
+from the same sweep, never mixed between the 100-trial headline runs and the
+15-seed repetitions.
+
+\subsection{Statistics}
+
+Because the evaluation pipeline is deterministic, the only randomness is the
+optimizer's seed. We report a one-sided Wilcoxon signed-rank test, Cliff's
+$\delta$ as an effect size that makes no distributional assumptions, and a
+bootstrap $95\%$ confidence interval on the mean difference.
+
+The signed-rank test saturates in our setting, and we say so rather than
+letting it look stronger than it is. With $n$ paired seeds and a method that
+wins on every one of them, the smallest $p$-value attainable is $2^{-n}$ ---
+$3.1\times10^{-5}$ at $n=15$ and $9.3\times10^{-10}$ at $n=30$. Where a test
+sits at that floor we report it as a floor, not as evidence that would grow
+stronger with more seeds; \textbf{the floor reflects how many seeds we ran,
+not how large the effect is}. Cliff's $\delta$ and the bootstrap interval
+carry the effect-size claim instead.
+
+\subsection{Reproducibility}
+
+All results were produced with Ax 1.3.1, BoTorch 0.18.1, PyTorch 2.13.0,
+NumPy 2.5.1 and SciPy 1.18.0 under Python 3.14. Architecture training used
+the Apple MPS backend; all search and simulation is deterministic on CPU.

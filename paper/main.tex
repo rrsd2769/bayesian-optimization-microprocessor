@@ -1,0 +1,79 @@
+%=============================================================
+% Joint Bayesian Optimization of CNN Architecture and RTOS
+% Scheduler Parameters for Energy-Efficient Edge Inference
+%
+% IEEE conference format. Compiles on Overleaf with pdfLaTeX.
+%=============================================================
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{url}
+
+% --- TikZ / PGF for the methodology diagrams -----------------
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit,backgrounds,calc}
+
+% --- Shared TikZ styles used by all figures ------------------
+\tikzset{
+  box/.style        = {rectangle, rounded corners=2pt, draw=black!70,
+                       fill=black!3, align=center, inner sep=3pt,
+                       font=\scriptsize, minimum height=6mm},
+  parambox/.style   = {box, fill=blue!6,  draw=blue!55},
+  modelbox/.style   = {box, fill=orange!8, draw=orange!65},
+  metricbox/.style  = {box, fill=green!8, draw=green!55},
+  decision/.style   = {diamond, aspect=2, draw=black!70, fill=yellow!10,
+                       align=center, inner sep=1pt, font=\scriptsize},
+  grp/.style        = {rectangle, rounded corners=3pt, draw=black!35,
+                       dashed, inner sep=5pt},
+  flow/.style       = {-{Stealth[length=4pt]}, draw=black!65, thick},
+  flowdash/.style   = {-{Stealth[length=4pt]}, draw=black!45, thick, dashed},
+  lbl/.style        = {font=\tiny, inner sep=1pt, fill=white}
+}
+
+\begin{document}
+
+\title{Joint Bayesian Optimization of CNN Architecture and\\
+       RTOS Scheduler Parameters for Energy-Efficient\\
+       Edge Inference}
+
+\author{\IEEEauthorblockN{Author Names}
+\IEEEauthorblockA{Affiliation\\
+Email: author@example.com}}
+
+\maketitle
+
+\begin{abstract}
+% TODO: written last, after Results are locked.
+Placeholder abstract.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Bayesian optimization, neural architecture search, multi-objective
+optimization, embedded systems, energy efficiency, real-time scheduling.
+\end{IEEEkeywords}
+
+\section{Introduction}
+% TODO -- Phase 3
+\input{methodology}
+
+\section{Results}
+% TODO -- Phase 3
+
+\section{Threats to Validity}
+\label{sec:threats}
+% TODO -- Phase 3
+
+\section{Conclusion}
+% TODO -- Phase 3
+
+\bibliographystyle{IEEEtran}
+\bibliography{refs}
+
+\end{document}
