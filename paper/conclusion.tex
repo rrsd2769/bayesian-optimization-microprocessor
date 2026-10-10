@@ -1,0 +1,38 @@
+%=============================================================
+% CONCLUSION
+%=============================================================
+
+Treating a convolutional network's architecture and the scheduler that
+runs it as one six-dimensional design problem, instead of tuning each
+alone, let a directed search come close to a reference front enumerated
+over $92{,}412$ designs at a small fraction of the cost. It matched the
+single-objective energy optimum in 30 evaluations where grid search used
+972, and it recovered $98.4\%$ of the reference hypervolume in 100. Its
+margin over random sampling at equal cost held on every repeated seed,
+30 of 30 and 15 of 15, so the advantage belongs to the search method and
+not to one lucky run.
+
+Two decisions kept the search cheap to run. The four quantities come
+from two kinds of model: closed-form or regression models for accuracy,
+memory, and energy, and a discrete-event simulation for latency alone.
+An evaluation took milliseconds, yet the queueing that latency depends
+on was simulated and not approximated away. Constraints also act inside
+the acquisition function, which steers proposals toward designs likely
+to be acceptable and spends few evaluations on designs no accuracy gain
+could rescue. Neither decision depends on this network or this device.
+Any joint architecture--scheduler problem trades evaluation realism
+against evaluation count, and pricing each quantity by how hard it is to
+obtain keeps a directed search affordable without a coarser model of the
+target hardware.
+
+The reference front rests on a fixed bit-width grid, three simulated time
+slices, and a single simulated core, and the accuracy behind every result
+is a regression estimate, not a measurement at each candidate. The next
+step is to test whether the evaluation-cost advantage survives as each of
+these simplifications is removed in turn: a finer bit-width grid with real
+4-bit kernels, a heterogeneous multi-core target, and accuracy measured
+on quantized hardware. Training one network that specializes to many
+deployment targets~\cite{cai2022enable} could replace the regression
+surface. Running the selected designs on a production tinyML runtime with
+measured power~\cite{lin2023tinyml,ray2022tinyml} would then close the
+remaining gap between simulated and measured performance.
