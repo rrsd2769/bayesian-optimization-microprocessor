@@ -1,0 +1,34 @@
+%=============================================================
+% PREVIEW BUILD -- Methodology + Results only.
+% No title/author/abstract/other sections: this is a review copy
+% of just this part, not the assembled paper. main.tex is the
+% real integration file and pulls in the same methodology.tex /
+% results.tex via \input.
+%=============================================================
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\usepackage[labelsep=colon,justification=raggedright,singlelinecheck=false,labelfont=bf]{caption}
+\renewcommand{\thetable}{\arabic{table}}
+\renewcommand{\tablename}{Table}
+\definecolor{tblhead}{gray}{0.85}
+
+\begin{document}
+
+\section{Methodology}
+\label{sec:methodology}
+\input{methodology}
+
+\clearpage
+\section{Results and Discussion}
+\label{sec:results}
+\input{results}
+
+\end{document}

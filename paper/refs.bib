@@ -1,161 +1,31 @@
 %=====================================================================
-% Bibliography.
+% Bibliography. Journal and periodical articles only.
 %
-% Entries marked [JOURNAL] were verified against dblp (venue, volume,
-% issue, pages, DOI). Entries marked [CONFERENCE] are included only
-% where the algorithm being used demands its source citation.
+% Every entry was checked against its Crossref DOI record on 2026-10-10
+% (authors, title, journal, volume, issue, pages, issue year). The one
+% exception is elsken2019survey: JMLR issues no DOIs, so it was checked
+% against the JMLR volume listing instead. Years are the year of the
+% printed issue, not the online-first date.
+%
+% Numbering is automatic (IEEEtran, order of first citation).
 %=====================================================================
 
 % ---------------------------------------------------------------
-% Cited in the methodology sections
+% Microcontroller inference and tinyML
 % ---------------------------------------------------------------
 
-% [JOURNAL]
-@article{bambagini2016energy,
-  author  = {Bambagini, Mario and Marinoni, Mauro and Aydin, Hakan and
-             Buttazzo, Giorgio C.},
-  title   = {Energy-Aware Scheduling for Real-Time Systems: A Survey},
-  journal = {ACM Transactions on Embedded Computing Systems},
-  volume  = {15},
-  number  = {1},
-  pages   = {7:1--7:34},
-  year    = {2016},
-  doi     = {10.1145/2808231}
-}
-
-% [JOURNAL]
-@article{mazumder2024regtune,
-  author  = {Mazumder, Arnab Neelim and Safavi, Farshad and
-             Rahnemoonfar, Maryam and Mohsenin, Tinoosh},
-  title   = {{Reg-Tune}: A Regression-Focused Fine-Tuning Approach for
-             Profiling Low Energy Consumption and Latency},
-  journal = {ACM Transactions on Embedded Computing Systems},
-  volume  = {23},
-  number  = {3},
-  pages   = {44:1--44:28},
-  year    = {2024},
-  doi     = {10.1145/3623380}
-}
-
-% [JOURNAL]
-@article{lu2024nasmoo,
-  author  = {Lu, Zhichao and Cheng, Ran and Jin, Yaochu and
-             Tan, Kay Chen and Deb, Kalyanmoy},
-  title   = {Neural Architecture Search as Multiobjective Optimization
-             Benchmarks: Problem Formulation and Performance Assessment},
-  journal = {IEEE Transactions on Evolutionary Computation},
-  volume  = {28},
-  number  = {2},
-  pages   = {323--337},
-  year    = {2024},
-  doi     = {10.1109/TEVC.2022.3233364}
-}
-
-% [CONFERENCE -- algorithm source]
-@inproceedings{daulton2021nehvi,
-  author    = {Daulton, Samuel and Balandat, Maximilian and Bakshy, Eytan},
-  title     = {Parallel {Bayesian} Optimization of Multiple Noisy Objectives
-               with Expected Hypervolume Improvement},
-  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
-  year      = {2021}
-}
-
-% [CONFERENCE -- algorithm source]
-@inproceedings{ament2023logei,
-  author    = {Ament, Sebastian and Daulton, Samuel and Eriksson, David and
-               Balandat, Maximilian and Bakshy, Eytan},
-  title     = {Unexpected Improvements to Expected Improvement for
-               {Bayesian} Optimization},
-  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
-  year      = {2023}
-}
-
-% ---------------------------------------------------------------
-% Verified journal references for Related Work (Phase 4)
-% ---------------------------------------------------------------
-
-% [JOURNAL]
-@article{parsa2020bayesian,
-  author  = {Parsa, Maryam and Mitchell, John P. and Schuman, Catherine D. and
-             Patton, Robert M. and Potok, Thomas E. and Roy, Kaushik},
-  title   = {Bayesian Multi-Objective Hyperparameter Optimization for
-             Accurate, Fast, and Efficient Neural Network Accelerator Design},
-  journal = {Frontiers in Neuroscience},
-  volume  = {14},
-  pages   = {667},
-  year    = {2020},
-  doi     = {10.3389/fnins.2020.00667}
-}
-
-% [JOURNAL]
-@article{chen2023chanas,
-  author  = {Chen, Weiwei and Wang, Ying and Xu, Ying and Gao, Chengsi and
-             Liu, Cheng and Zhang, Lei},
-  title   = {A Framework for Neural Network Architecture and Compile
-             Co-optimization},
-  journal = {ACM Transactions on Embedded Computing Systems},
-  volume  = {22},
-  number  = {1},
-  pages   = {5:1--5:24},
-  year    = {2023},
-  doi     = {10.1145/3533251}
-}
-
-% [JOURNAL]
-@article{jiang2020coexploration,
-  author  = {Jiang, Weiwen and Yang, Lei and Sha, Edwin Hsing-Mean and
-             Zhuge, Qingfeng and Gu, Shouzhen and Dasgupta, Sakyasingha and
-             Shi, Yiyu and Hu, Jingtong},
-  title   = {Hardware/Software Co-Exploration of Neural Architectures},
-  journal = {IEEE Transactions on Computer-Aided Design of Integrated
-             Circuits and Systems},
-  volume  = {39},
-  number  = {12},
-  pages   = {4805--4815},
-  year    = {2020},
-  doi     = {10.1109/TCAD.2020.2986127}
-}
-
-% [JOURNAL]
-@article{sekanina2021survey,
-  author  = {Sekanina, Luk\'{a}\v{s}},
-  title   = {Neural Architecture Search and Hardware Accelerator Co-Search:
-             A Survey},
-  journal = {IEEE Access},
-  volume  = {9},
-  pages   = {151337--151362},
-  year    = {2021},
-  doi     = {10.1109/ACCESS.2021.3126685}
-}
-
-% [JOURNAL]
-@article{zhang2024dvfo,
-  author  = {Zhang, Ziyang and Zhao, Yang and Li, Huan and Lin, Changyao and
-             Liu, Jie},
-  title   = {{DVFO}: Learning-Based {DVFS} for Energy-Efficient Edge-Cloud
-             Collaborative Inference},
-  journal = {IEEE Transactions on Mobile Computing},
-  volume  = {23},
+@article{tsoukas2024tinyml,
+  author  = {Tsoukas, Vasileios and Gkogkidis, Anargyros and Boumpa, Eleni and
+             Kakarountas, Athanasios},
+  title   = {A Review on the Emerging Technology of {TinyML}},
+  journal = {ACM Computing Surveys},
+  volume  = {56},
   number  = {10},
-  pages   = {9042--9059},
+  pages   = {1--37},
   year    = {2024},
-  doi     = {10.1109/TMC.2024.3357218}
+  doi     = {10.1145/3661820}
 }
 
-% [JOURNAL]
-@article{sheikh2019multicore,
-  author  = {Sheikh, Saad Zia and Pasha, Muhammad Adeel},
-  title   = {Energy-Efficient Multicore Scheduling for Hard Real-Time
-             Systems: A Survey},
-  journal = {ACM Transactions on Embedded Computing Systems},
-  volume  = {17},
-  number  = {6},
-  pages   = {94:1--94:26},
-  year    = {2019},
-  doi     = {10.1145/3291387}
-}
-
-% [JOURNAL]
 @article{mazumder2021microai,
   author  = {Mazumder, Arnab Neelim and Meng, Jian and Rashid, Hasib-Al and
              Kallakuri, Utteja and Zhang, Xin and Seo, Jae-Sun and
@@ -171,7 +41,327 @@
   doi     = {10.1109/JETCAS.2021.3129415}
 }
 
-% [JOURNAL]
+@article{lin2023tinyml,
+  author  = {Lin, Ji and Zhu, Ligeng and Chen, Wei-Ming and Wang, Wei-Chen and
+             Han, Song},
+  title   = {Tiny Machine Learning: Progress and Futures},
+  journal = {IEEE Circuits and Systems Magazine},
+  volume  = {23},
+  number  = {3},
+  pages   = {8--34},
+  year    = {2023},
+  doi     = {10.1109/MCAS.2023.3302182}
+}
+
+@article{ray2022tinyml,
+  author  = {Ray, Partha Pratim},
+  title   = {A Review on {TinyML}: State-of-the-Art and Prospects},
+  journal = {Journal of King Saud University -- Computer and Information
+             Sciences},
+  volume  = {34},
+  number  = {4},
+  pages   = {1595--1623},
+  year    = {2022},
+  doi     = {10.1016/j.jksuci.2021.11.019}
+}
+
+@article{cai2022enable,
+  author  = {Cai, Han and Lin, Ji and Lin, Yujun and Liu, Zhijian and
+             Tang, Haotian and Wang, Hanrui and Zhu, Ligeng and Han, Song},
+  title   = {Enable Deep Learning on Mobile Devices: Methods, Systems, and
+             Applications},
+  journal = {ACM Transactions on Design Automation of Electronic Systems},
+  volume  = {27},
+  number  = {3},
+  pages   = {1--50},
+  year    = {2022},
+  doi     = {10.1145/3486618}
+}
+
+% ---------------------------------------------------------------
+% Hardware-aware architecture search and co-design
+% ---------------------------------------------------------------
+
+@article{elsken2019survey,
+  author  = {Elsken, Thomas and Metzen, Jan Hendrik and Hutter, Frank},
+  title   = {Neural Architecture Search: A Survey},
+  journal = {Journal of Machine Learning Research},
+  volume  = {20},
+  number  = {55},
+  pages   = {1--21},
+  year    = {2019}
+}
+
+@article{chitty2023hwnas,
+  author  = {Chitty-Venkata, Krishna Teja and Somani, Arun K.},
+  title   = {Neural Architecture Search Survey: A Hardware Perspective},
+  journal = {ACM Computing Surveys},
+  volume  = {55},
+  number  = {4},
+  pages   = {1--36},
+  year    = {2023},
+  doi     = {10.1145/3524500}
+}
+
+@article{jiang2020coexploration,
+  author  = {Jiang, Weiwen and Yang, Lei and Sha, Edwin Hsing-Mean and
+             Zhuge, Qingfeng and Gu, Shouzhen and Dasgupta, Sakyasingha and
+             Shi, Yiyu and Hu, Jingtong},
+  title   = {Hardware/Software Co-Exploration of Neural Architectures},
+  journal = {IEEE Transactions on Computer-Aided Design of Integrated
+             Circuits and Systems},
+  volume  = {39},
+  number  = {12},
+  pages   = {4805--4815},
+  year    = {2020},
+  doi     = {10.1109/TCAD.2020.2986127}
+}
+
+@article{sekanina2021survey,
+  author  = {Sekanina, Luk\'{a}\v{s}},
+  title   = {Neural Architecture Search and Hardware Accelerator Co-Search:
+             A Survey},
+  journal = {IEEE Access},
+  volume  = {9},
+  pages   = {151337--151362},
+  year    = {2021},
+  doi     = {10.1109/ACCESS.2021.3126685}
+}
+
+@article{chen2023chanas,
+  author  = {Chen, Weiwei and Wang, Ying and Xu, Ying and Gao, Chengsi and
+             Liu, Cheng and Zhang, Lei},
+  title   = {A Framework for Neural Network Architecture and Compile
+             Co-optimization},
+  journal = {ACM Transactions on Embedded Computing Systems},
+  volume  = {22},
+  number  = {1},
+  pages   = {1--24},
+  year    = {2023},
+  doi     = {10.1145/3533251}
+}
+
+@article{mazumder2024regtune,
+  author  = {Mazumder, Arnab Neelim and Safavi, Farshad and
+             Rahnemoonfar, Maryam and Mohsenin, Tinoosh},
+  title   = {{Reg-Tune}: A Regression-Focused Fine-Tuning Approach for
+             Profiling Low Energy Consumption and Latency},
+  journal = {ACM Transactions on Embedded Computing Systems},
+  volume  = {23},
+  number  = {3},
+  pages   = {1--28},
+  year    = {2024},
+  doi     = {10.1145/3623380}
+}
+
+% ---------------------------------------------------------------
+% Real-time scheduling and energy
+% ---------------------------------------------------------------
+
+@article{liu1973scheduling,
+  author  = {Liu, C. L. and Layland, James W.},
+  title   = {Scheduling Algorithms for Multiprogramming in a
+             Hard-Real-Time Environment},
+  journal = {Journal of the ACM},
+  volume  = {20},
+  number  = {1},
+  pages   = {46--61},
+  year    = {1973},
+  doi     = {10.1145/321738.321743}
+}
+
+@article{bambagini2016energy,
+  author  = {Bambagini, Mario and Marinoni, Mauro and Aydin, Hakan and
+             Buttazzo, Giorgio},
+  title   = {Energy-Aware Scheduling for Real-Time Systems: A Survey},
+  journal = {ACM Transactions on Embedded Computing Systems},
+  volume  = {15},
+  number  = {1},
+  pages   = {1--34},
+  year    = {2016},
+  doi     = {10.1145/2808231}
+}
+
+@article{sheikh2018multicore,
+  author  = {Sheikh, Saad Zia and Pasha, Muhammad Adeel},
+  title   = {Energy-Efficient Multicore Scheduling for Hard Real-Time
+             Systems: A Survey},
+  journal = {ACM Transactions on Embedded Computing Systems},
+  volume  = {17},
+  number  = {6},
+  pages   = {1--26},
+  year    = {2018},
+  doi     = {10.1145/3291387}
+}
+
+@article{zhang2024dvfo,
+  author  = {Zhang, Ziyang and Zhao, Yang and Li, Huan and Lin, Changyao and
+             Liu, Jie},
+  title   = {{DVFO}: Learning-Based {DVFS} for Energy-Efficient Edge-Cloud
+             Collaborative Inference},
+  journal = {IEEE Transactions on Mobile Computing},
+  volume  = {23},
+  number  = {10},
+  pages   = {9042--9059},
+  year    = {2024},
+  doi     = {10.1109/TMC.2024.3357218}
+}
+
+@article{chandrakasan1992lowpower,
+  author  = {Chandrakasan, Anantha P. and Sheng, Samuel and
+             Brodersen, Robert W.},
+  title   = {Low-Power {CMOS} Digital Design},
+  journal = {IEEE Journal of Solid-State Circuits},
+  volume  = {27},
+  number  = {4},
+  pages   = {473--484},
+  year    = {1992},
+  doi     = {10.1109/4.126534}
+}
+
+@article{sze2017efficient,
+  author  = {Sze, Vivienne and Chen, Yu-Hsin and Yang, Tien-Ju and
+             Emer, Joel S.},
+  title   = {Efficient Processing of Deep Neural Networks: A Tutorial and
+             Survey},
+  journal = {Proceedings of the IEEE},
+  volume  = {105},
+  number  = {12},
+  pages   = {2295--2329},
+  year    = {2017},
+  doi     = {10.1109/JPROC.2017.2761740}
+}
+
+@article{rokh2023quantization,
+  author  = {Rokh, Babak and Azarpeyvand, Ali and Khanteymoori, Alireza},
+  title   = {A Comprehensive Survey on Model Quantization for Deep Neural
+             Networks in Image Classification},
+  journal = {ACM Transactions on Intelligent Systems and Technology},
+  volume  = {14},
+  number  = {6},
+  pages   = {1--50},
+  year    = {2023},
+  doi     = {10.1145/3623402}
+}
+
+% ---------------------------------------------------------------
+% Bayesian optimization and acquisition functions
+% ---------------------------------------------------------------
+
+@article{shahriari2016review,
+  author  = {Shahriari, Bobak and Swersky, Kevin and Wang, Ziyu and
+             Adams, Ryan P. and de Freitas, Nando},
+  title   = {Taking the Human Out of the Loop: A Review of {Bayesian}
+             Optimization},
+  journal = {Proceedings of the IEEE},
+  volume  = {104},
+  number  = {1},
+  pages   = {148--175},
+  year    = {2016},
+  doi     = {10.1109/JPROC.2015.2494218}
+}
+
+@article{parsa2020bayesian,
+  author  = {Parsa, Maryam and Mitchell, John P. and Schuman, Catherine D. and
+             Patton, Robert M. and Potok, Thomas E. and Roy, Kaushik},
+  title   = {{Bayesian} Multi-Objective Hyperparameter Optimization for
+             Accurate, Fast, and Efficient Neural Network Accelerator Design},
+  journal = {Frontiers in Neuroscience},
+  volume  = {14},
+  pages   = {667},
+  year    = {2020},
+  doi     = {10.3389/fnins.2020.00667}
+}
+
+@article{jones1998efficient,
+  author  = {Jones, Donald R. and Schonlau, Matthias and Welch, William J.},
+  title   = {Efficient Global Optimization of Expensive Black-Box Functions},
+  journal = {Journal of Global Optimization},
+  volume  = {13},
+  number  = {4},
+  pages   = {455--492},
+  year    = {1998},
+  doi     = {10.1023/A:1008306431147}
+}
+
+@article{letham2019constrained,
+  author  = {Letham, Benjamin and Karrer, Brian and Ottoni, Guilherme and
+             Bakshy, Eytan},
+  title   = {Constrained {Bayesian} Optimization with Noisy Experiments},
+  journal = {Bayesian Analysis},
+  volume  = {14},
+  number  = {2},
+  pages   = {495--519},
+  year    = {2019},
+  doi     = {10.1214/18-BA1110}
+}
+
+@article{emmerich2006single,
+  author  = {Emmerich, Michael T. M. and Giannakoglou, Kyriakos C. and
+             Naujoks, Boris},
+  title   = {Single- and Multiobjective Evolutionary Optimization Assisted
+             by {Gaussian} Random Field Metamodels},
+  journal = {IEEE Transactions on Evolutionary Computation},
+  volume  = {10},
+  number  = {4},
+  pages   = {421--439},
+  year    = {2006},
+  doi     = {10.1109/TEVC.2005.859463}
+}
+
+@article{sobol1967points,
+  author  = {Sobol', I. M.},
+  title   = {On the Distribution of Points in a Cube and the Approximate
+             Evaluation of Integrals},
+  journal = {USSR Computational Mathematics and Mathematical Physics},
+  volume  = {7},
+  number  = {4},
+  pages   = {86--112},
+  year    = {1967},
+  doi     = {10.1016/0041-5553(67)90144-9}
+}
+
+@article{owen1998scrambling,
+  author  = {Owen, Art B.},
+  title   = {Scrambling {Sobol'} and {Niederreiter--Xing} Points},
+  journal = {Journal of Complexity},
+  volume  = {14},
+  number  = {4},
+  pages   = {466--489},
+  year    = {1998},
+  doi     = {10.1006/jcom.1998.0487}
+}
+
+% ---------------------------------------------------------------
+% Multi-objective search and performance indicators
+% ---------------------------------------------------------------
+
+@article{deb2002nsga2,
+  author  = {Deb, Kalyanmoy and Pratap, Amrit and Agarwal, Sameer and
+             Meyarivan, T.},
+  title   = {A Fast and Elitist Multiobjective Genetic Algorithm:
+             {NSGA-II}},
+  journal = {IEEE Transactions on Evolutionary Computation},
+  volume  = {6},
+  number  = {2},
+  pages   = {182--197},
+  year    = {2002},
+  doi     = {10.1109/4235.996017}
+}
+
+@article{lu2024nasmoo,
+  author  = {Lu, Zhichao and Cheng, Ran and Jin, Yaochu and
+             Tan, Kay Chen and Deb, Kalyanmoy},
+  title   = {Neural Architecture Search as Multiobjective Optimization
+             Benchmarks: Problem Formulation and Performance Assessment},
+  journal = {IEEE Transactions on Evolutionary Computation},
+  volume  = {28},
+  number  = {2},
+  pages   = {323--337},
+  year    = {2024},
+  doi     = {10.1109/TEVC.2022.3233364}
+}
+
 @article{lyu2024surrogate,
   author  = {Lyu, Kuangda and Li, Hao and Gong, Maoguo and Xing, Lining and
              Qin, A. K.},
@@ -186,7 +376,6 @@
   doi     = {10.1109/TEVC.2023.3319567}
 }
 
-% [JOURNAL]
 @article{ma2024paretowise,
   author  = {Ma, Lianbo and Li, Nan and Yu, Guo and Geng, Xiaoyu and
              Cheng, Shi and Wang, Xingwei and Huang, Min and Jin, Yaochu},
@@ -200,15 +389,67 @@
   doi     = {10.1109/TEVC.2023.3314766}
 }
 
-% [JOURNAL]
-@article{tsoukas2024tinyml,
-  author  = {Tsoukas, Vasileios and Gkogkidis, Anargyros and Boumpa, Eleni and
-             Kakarountas, Athanasios},
-  title   = {A Review on the Emerging Technology of {TinyML}},
+@article{zitzler2003performance,
+  author  = {Zitzler, Eckart and Thiele, Lothar and Laumanns, Marco and
+             Fonseca, Carlos M. and da Fonseca, Viviane Grunert},
+  title   = {Performance Assessment of Multiobjective Optimizers: An
+             Analysis and Review},
+  journal = {IEEE Transactions on Evolutionary Computation},
+  volume  = {7},
+  number  = {2},
+  pages   = {117--132},
+  year    = {2003},
+  doi     = {10.1109/TEVC.2003.810758}
+}
+
+@article{coello2005igd,
+  author  = {Coello Coello, Carlos A. and Cruz Cort\'{e}s, Nareli},
+  title   = {Solving Multiobjective Optimization Problems Using an
+             Artificial Immune System},
+  journal = {Genetic Programming and Evolvable Machines},
+  volume  = {6},
+  number  = {2},
+  pages   = {163--190},
+  year    = {2005},
+  doi     = {10.1007/s10710-005-6164-x}
+}
+
+@article{guerreiro2022hypervolume,
+  author  = {Guerreiro, Andreia P. and Fonseca, Carlos M. and
+             Paquete, Lu\'{\i}s},
+  title   = {The Hypervolume Indicator: Computational Problems and
+             Algorithms},
   journal = {ACM Computing Surveys},
-  volume  = {56},
-  number  = {10},
-  pages   = {259},
-  year    = {2024},
-  doi     = {10.1145/3661820}
+  volume  = {54},
+  number  = {6},
+  pages   = {1--42},
+  year    = {2022},
+  doi     = {10.1145/3453474}
+}
+
+% ---------------------------------------------------------------
+% Statistics
+% ---------------------------------------------------------------
+
+@article{wilcoxon1945individual,
+  author  = {Wilcoxon, Frank},
+  title   = {Individual Comparisons by Ranking Methods},
+  journal = {Biometrics Bulletin},
+  volume  = {1},
+  number  = {6},
+  pages   = {80--83},
+  year    = {1945},
+  doi     = {10.2307/3001968}
+}
+
+@article{cliff1993dominance,
+  author  = {Cliff, Norman},
+  title   = {Dominance Statistics: Ordinal Analyses to Answer Ordinal
+             Questions},
+  journal = {Psychological Bulletin},
+  volume  = {114},
+  number  = {3},
+  pages   = {494--509},
+  year    = {1993},
+  doi     = {10.1037/0033-2909.114.3.494}
 }

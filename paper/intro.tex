@@ -1,0 +1,54 @@
+%=============================================================
+% INTRODUCTION
+%=============================================================
+
+A microcontroller that runs a convolutional network usually has no fan,
+draws on a coin cell or a harvested supply, and shares its single core
+with the other tasks of a real-time operating system
+(RTOS)~\cite{tsoukas2024tinyml,mazumder2021microai,ray2022tinyml}. Energy
+per inference limits such a device more than anything else, and two
+groups of decisions set it. Depth, channel width, and weight precision
+fix how many multiply--accumulate (MAC) operations the network needs and how much
+memory it occupies. The time slice, the scheduling policy, and the
+clock-scaling factor then fix how quickly, and at what power, the RTOS
+carries those operations out. The groups interact. A lower clock saves
+power but stretches every inference, and a smaller network frees latency
+headroom that a lower clock can then spend.
+
+Tool flows usually tune one group while holding the other fixed. Neural
+architecture search~\cite{elsken2019survey}, in its hardware-aware form,
+co-explores network topology against a given accelerator, compiler, or
+device~\cite{chitty2023hwnas,jiang2020coexploration,sekanina2021survey,chen2023chanas}.
+MCUNet, built for microcontrollers, co-designs the network with its
+inference library but leaves the RTOS scheduler and the core clock out of
+the search~\cite{lin2023tinyml}. On the
+other side, energy-aware real-time scheduling is a mature area of its
+own~\cite{bambagini2016energy,sheikh2018multicore}, recently extended to
+learned dynamic voltage and frequency scaling (DVFS) for inference
+workloads~\cite{zhang2024dvfo}; there, the network is an input to the
+problem and is never searched.
+
+Bayesian optimization (BO) fits problems where each evaluation is costly
+and no gradient is available~\cite{shahriari2016review}. It has been used
+for multi-objective hyperparameter search in neural-network accelerator
+design~\cite{parsa2020bayesian}. On benchmark problems, multi-objective
+architecture search can now be scored against known
+fronts~\cite{lu2024nasmoo},
+with evolutionary algorithms as the more common
+search method~\cite{deb2002nsga2,lyu2024surrogate,ma2024paretowise}, and
+regression models of deployment energy and latency cut down how often a
+candidate must be profiled on hardware~\cite{mazumder2024regtune}. In
+none of these studies do RTOS scheduler parameters share a search space
+with the architecture.
+
+Here they do. Network architecture and scheduler configuration form one
+six-dimensional problem, searched with BO and with neither half fixed in
+advance. The same design space carries two objectives: minimum energy
+under accuracy and latency constraints, and the accuracy--energy
+trade-off under the latency constraint alone. Both are scored against a
+reference built by enumerating $92{,}412$ designs. Single-objective BO
+reaches the enumerated energy optimum in 30 evaluations, where grid
+search spends 972. Multi-objective BO recovers $98.4\%$ of the reference
+hypervolume in 100 evaluations. Random sampling at equal cost trails on
+both problems and on every repeated seed, 30 of 30 for the first and 15
+of 15 for the second.
