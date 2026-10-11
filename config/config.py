@@ -8,9 +8,9 @@ RANDOM_SEED = 42
 # ── Paths ─────────────────────────────────────────────────────────────────────
 PROJECT_ROOT = Path(__file__).parent.parent.resolve()
 DATA_DIR = PROJECT_ROOT / "data"
-CHECKPOINT_DIR = PROJECT_ROOT / "checkpoints"
-RESULTS_DIR = PROJECT_ROOT / "results"
-FIGURES_DIR = PROJECT_ROOT / "figures"
+CHECKPOINT_DIR = PROJECT_ROOT / "checkpoints" / "v2"
+RESULTS_DIR = PROJECT_ROOT / "results" / "v2"   # results/v1 is the read-only v1 archive
+FIGURES_DIR = PROJECT_ROOT / "figures" / "v2"
 LOGS_DIR = PROJECT_ROOT / "logs"
 
 for d in [DATA_DIR, CHECKPOINT_DIR, RESULTS_DIR, FIGURES_DIR, LOGS_DIR]:
