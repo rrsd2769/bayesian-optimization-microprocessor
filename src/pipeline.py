@@ -111,7 +111,7 @@ def cloud_calib(args):
 @stage("import-cloud", "read Cloud 'Export as CSV' files into cloud_calibration", ["cloud_calibration"],
        lambda p: p.add_argument("--csv", nargs="+", required=True))
 def import_cloud(args):
-    from src.evaluator.cloud import import_cloud_csv, sha256_file
+    from src.evaluator import import_cloud_csv, sha256_file
     hashes = {sha256_file(results.path("calib_model", arch=a.name, prec=p)): (a.name, p)
               for a in calib_archs() for p in ("fp32", "int8")}
     existing = results.load("cloud_calibration") if results.exists("cloud_calibration") else None
@@ -124,7 +124,8 @@ def import_cloud(args):
 
 @stage("calibrate", "fit the cycle and memory models to the Cloud benchmarks", ["cycle_calibration", "memory_calibration"])
 def calibrate(args):
-    from src.evaluator.calibrate import fit_cycles, fit_memory, to_json
+    from src.evaluator import calibration_to_json as to_json
+    from src.evaluator import fit_cycle_calibration as fit_cycles, fit_memory_calibration as fit_memory
     cloud = results.load("cloud_calibration")
     for (cal, report), name in ((fit_cycles(cloud), "cycle_calibration"), (fit_memory(cloud), "memory_calibration")):
         results.save(name, to_json(cal, report))
@@ -224,6 +225,93 @@ def validate_accuracy(args):
     for arch, per_b in out["seed_noise"].items():
         print(f"{arch}: seed std (points) " + " ".join(f"b{b}={v['std'] * 100:.2f}" for b, v in sorted(per_b.items(), key=lambda kv: int(kv[0]))))
     print(f"architectures with 4-bit accuracy below 32-bit: {out['n_with_drop_above_zero']} of {out['n_architectures']}")
+
+
+# ── Phase 5 ──────────────────────────────────────────────────────────────────
+
+def _read_blocks():
+    import pandas as pd
+    from src.search.reference_front import blocks
+    return pd.concat([results.load("front_block", L=L, b=b) for L, b in blocks()], ignore_index=True)
+
+
+@stage("front", "enumerate the 12,000-design grid, save the Pareto front and the hypervolume corners",
+       ["front_block", "hv_reference", "reference_front", "reference_front_summary"])
+def front(args):
+    from src.evaluator import Scenario
+    from src.search import reference_front as rf
+    sc = Scenario.nominal()
+
+    def work(job, tmp, deadline):
+        L, b = job.meta
+        rf.evaluate_block(L, b, sc).to_csv(tmp, index=False)
+
+    jobs = [Job(f"L{L}_b{b}", results.path("front_block", L=L, b=b), meta=(L, b)) for L, b in rf.blocks()]
+    summary = run_jobs("front", jobs, work, args.minutes)
+    if not summary.finished:
+        return summary
+    df = _read_blocks()
+    if not results.exists("hv_reference"):     # chosen once, never changed afterwards
+        ok = df[df["acceptable"]]
+        results.save("hv_reference", rf.hv_corners(float(ok["energy_uj"].max())))
+    corners = results.load("hv_reference")
+    results.save("reference_front", rf.front_of(df))
+    out = rf.summarise(df, corners)
+    out["wall_s"] = float(df.groupby(["L", "b"])["block_wall_s"].first().sum())
+    results.save("reference_front_summary", out)
+    print(json.dumps({k: out[k] for k in ("grid_size", "n_acceptable", "n_front", "rejected", "hypervolume", "front_composition")}, indent=1))
+    print("hv corners:", corners)
+    return summary
+
+
+def sensitivity_cases(base):
+    """Every sensitivity case as a Scenario derived from the nominal one. The two generated task sets are not yet defined."""
+    cases = {"nominal": base}
+    for lat in (50, 100, 200):
+        for miss in (0.0, 0.01, 0.05):
+            if (lat, miss) != (100, 0.01):
+                cases[f"lat{lat}_miss{round(miss * 100)}"] = base.with_limits(latency_ms=float(lat), miss_ratio=miss)
+    cases["idle_stop"] = base.but(idle_mode="stop")
+    cases["latency_mean"] = base.with_limits(latency_stat="mean")
+    for k in (0.5, 2.0):
+        cases[f"kernel_x{k:g}"] = base.with_kernel_scale(k)
+        cases[f"r16_x{k:g}"] = base.with_overhead_scale(r16=k)
+        cases[f"r4_x{k:g}"] = base.with_overhead_scale(r4=k)
+    return cases
+
+
+@stage("sensitivity", "recompute the front under limits, idle mode, kernel costs and literature overheads",
+       ["sensitivity_case", "sensitivity"])
+def sensitivity(args):
+    import pandas as pd
+    from src.evaluator import Scenario
+    from src.search import reference_front as rf
+    if not results.exists("hv_reference"):
+        raise SystemExit("run the front stage first: it fixes the hypervolume corners")
+    corners = results.load("hv_reference")
+    cases = sensitivity_cases(Scenario.nominal())
+
+    def work(job, tmp, deadline):
+        df = pd.concat([rf.evaluate_block(L, b, cases[job.key]) for L, b in rf.blocks()], ignore_index=True)
+        out = rf.summarise(df, corners)
+        out["case"] = job.key
+        tmp.write_text(json.dumps(out, indent=2, sort_keys=True))
+
+    jobs = [Job(name, results.path("sensitivity_case", case=name)) for name in cases]
+    summary = run_jobs("sensitivity", jobs, work, args.minutes)
+    rows = []
+    for j in jobs:
+        if j.output.exists():
+            r = json.loads(j.output.read_text())
+            comp = r["front_composition"]
+            rows.append(dict(case=r["case"], n_acceptable=r["n_acceptable"], n_front=r["n_front"],
+                             hv_A=r["hypervolume"]["A"], hv_B=r["hypervolume"]["B"],
+                             front_b=" ".join(comp["b"]), front_L=" ".join(comp["L"]), front_f=" ".join(comp["f_idx"]),
+                             front_pi=" ".join(comp["pi"])))
+    if rows:
+        results.save("sensitivity", pd.DataFrame(rows))
+        print(pd.DataFrame(rows).to_string(index=False))
+    return summary
 
 
 @stage("status", "list every stage, its artifacts and whether they exist", [])

@@ -8,7 +8,7 @@ drop_32_to_4: for every architecture (table seed), val_acc(b=32) - val_acc(b=4),
 import numpy as np
 import pandas as pd
 
-from src.evaluator.accuracy import TABLE_SEED
+from src.evaluator import TABLE_SEED
 
 
 def validate(m: pd.DataFrame) -> dict:
