@@ -6,3 +6,6 @@ data/
 logs/*.log
 # LaTeX build artifacts
 paper/build/
+
+# third-party reference PDFs (datasheets)
+docs/reference/*.pdf
