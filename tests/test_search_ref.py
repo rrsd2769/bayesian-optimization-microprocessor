@@ -69,7 +69,7 @@ def test_front_summary_counts_and_hv():
 def test_sensitivity_case_list():
     from src.pipeline import sensitivity_cases
     cases = sensitivity_cases(scenario())
-    assert len(cases) == 1 + 8 + 1 + 1 + 6      # nominal, other limit pairs, stop idle, mean latency, kernel/r16/r4 x0.5,x2
+    assert len(cases) == 1 + 8 + 1 + 1 + 6 + 2      # nominal, other limit pairs, stop idle, mean latency, kernel/r16/r4 x0.5,x2, two task sets
     assert cases["latency_mean"].limits.latency_stat == "mean" and cases["idle_stop"].idle_mode == "stop"
     assert cases["lat50_miss0"].limits.latency_ms == 50 and cases["lat50_miss0"].limits.miss_ratio == 0.0
     assert cases["kernel_x2"].workload.switch_cycles == 780

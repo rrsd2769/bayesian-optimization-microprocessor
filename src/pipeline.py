@@ -265,7 +265,7 @@ def front(args):
 
 
 def sensitivity_cases(base):
-    """Every sensitivity case as a Scenario derived from the nominal one. The two generated task sets are not yet defined."""
+    """Every sensitivity case as a Scenario derived from the nominal one."""
     cases = {"nominal": base}
     for lat in (50, 100, 200):
         for miss in (0.0, 0.01, 0.05):
@@ -277,6 +277,8 @@ def sensitivity_cases(base):
         cases[f"kernel_x{k:g}"] = base.with_kernel_scale(k)
         cases[f"r16_x{k:g}"] = base.with_overhead_scale(r16=k)
         cases[f"r4_x{k:g}"] = base.with_overhead_scale(r4=k)
+    for u in (0.2, 0.5):     # Kim 2021 harmonicT2, 2 tasks, utilization at 180 MHz
+        cases[f"taskset_u{round(u * 100)}"] = base.with_generated_tasks(u)
     return cases
 
 
