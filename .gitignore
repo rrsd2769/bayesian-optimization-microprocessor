@@ -9,3 +9,4 @@ paper/build/
 
 # third-party reference PDFs (datasheets)
 docs/reference/*.pdf
+results/v2/exports/

@@ -94,3 +94,8 @@ class Arch:
                 if s.hidden:
                     mods += [nn.ReLU(inplace=True), nn.Dropout(0.3)]
         return nn.Sequential(*mods)
+
+    def onnx(self, b: int, path, calib=None) -> None:
+        """Export to ONNX for the Cloud: fp32 (b=32) or int8 QDQ (b=8)."""
+        from src.network.export import export_arch
+        export_arch(self, b, path, calib)

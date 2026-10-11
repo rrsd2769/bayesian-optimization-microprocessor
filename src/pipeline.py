@@ -67,6 +67,54 @@ def train_one(args):
     return run_jobs("train", [job], work, args.minutes)
 
 
+# ── Phase 2 ──────────────────────────────────────────────────────────────────
+
+CALIB_LAYERS = (2, 3, 4, 5)
+CALIB_WIDTHS = (0.25, 0.625, 1.0)
+CLOUD_COLUMNS = ["arch", "precision", "cycles", "time_ms", "flash_kib", "ram_kib"]
+
+
+def calib_archs():
+    from src.network.arch import Arch
+    return [Arch(L, w) for L in CALIB_LAYERS for w in CALIB_WIDTHS]
+
+
+@stage("export-calib", "write fp32 and int8 ONNX models of the 12 calibration architectures", ["calib_model"])
+def export_calib(args):
+    from src.network.export import calibration_images
+    cache = {}
+
+    def work(job, tmp, deadline):
+        arch, prec = job.meta
+        if "calib" not in cache:
+            cache["calib"] = calibration_images()
+        arch.onnx(32 if prec == "fp32" else 8, tmp, cache["calib"])
+
+    jobs = [Job(f"{a.name}_{p}", results.path("calib_model", arch=a.name, prec=p), meta=(a, p))
+            for a in calib_archs() for p in ("fp32", "int8")]
+    return run_jobs("export-calib", jobs, work, args.minutes)
+
+
+@stage("cloud-calib", "manual: benchmark the exported models on the Cloud, then check the results file",
+       ["cloud_board", "cloud_calibration"])
+def cloud_calib(args):
+    expected = [(a.name, p) for a in calib_archs() for p in ("fp32", "int8")]
+    if not results.exists("cloud_calibration"):
+        print("Upload each file below to the STM32Cube.AI Developer Cloud, benchmark it on the board named in\n"
+              f"{results.path('cloud_board')}, and record one row per model in\n{results.path('cloud_calibration')}\n"
+              f"with columns: {', '.join(CLOUD_COLUMNS)} (precision is fp32 or int8).")
+        for name, prec in expected:
+            print(f"  {results.path('calib_model', arch=name, prec=prec)}")
+        return
+    df = results.load("cloud_calibration")
+    missing = [c for c in CLOUD_COLUMNS if c not in df.columns]
+    have = set(zip(df.get("arch", []), df.get("precision", [])))
+    todo = [e for e in expected if e not in have]
+    print(f"columns missing: {missing or 'none'} | rows {len(df)} of {len(expected)} | models still to record: {len(todo)}")
+    for name, prec in todo:
+        print(f"  {name} {prec}")
+
+
 @stage("status", "list every stage, its artifacts and whether they exist", [])
 def status(args):
     for name, s in STAGES.items():

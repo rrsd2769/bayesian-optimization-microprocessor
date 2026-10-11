@@ -6,7 +6,7 @@ Interface:
     results.save(name, data, **params)
     results.exists(name, **params) / results.path(name, **params)
 
-An artifact is a name, a path template under the results root, a format and the
+An artifact is a name, a path template under the results root, a format (json, csv or file) and the
 pipeline stage that produces it. Nothing outside this module builds paths into
 results/. Artifacts are registered in the phase that first writes them.
 Tests point the store at a temp dir with `results.set_root(tmp_path)`.
@@ -36,6 +36,10 @@ REGISTRY = {a.name: a for a in [
     # Phase 0
     Artifact("train_bench", "train_bench.json", "json", "bench"),
     Artifact("train_run", "train/{arch}_seed{seed}.json", "json", "train"),
+    # Phase 2
+    Artifact("calib_model", "exports/calib/{arch}_{prec}.onnx", "file", "export-calib"),
+    Artifact("cloud_board", "cloud_board.json", "json", "cloud-calib"),
+    Artifact("cloud_calibration", "cloud_calibration.csv", "csv", "cloud-calib"),
 ]}
 
 
@@ -61,6 +65,8 @@ class ResultsStore:
     def load(self, name: str, **params) -> Any:
         art = self._artifact(name, params)
         p = self.path(name, **params)
+        if art.fmt == "file":
+            raise TypeError(f"artifact '{name}' is a file; use path()")
         if not p.exists():
             raise FileNotFoundError(f"artifact '{name}' is missing: run stage '{art.stage}' first")
         if art.fmt == "json":
@@ -70,6 +76,8 @@ class ResultsStore:
     def save(self, name: str, data: Any, **params) -> Path:
         art = self._artifact(name, params)
         p = self.path(name, **params)
+        if art.fmt == "file":
+            raise TypeError(f"artifact '{name}' is a file written by its stage; use path()")
         p.parent.mkdir(parents=True, exist_ok=True)
         tmp = p.with_name(p.name + ".tmp")
         if art.fmt == "json":
