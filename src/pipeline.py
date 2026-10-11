@@ -320,7 +320,7 @@ def sensitivity(args):
 
 # Minutes of chunk time a run needs before it may start (a run cannot be resumed, so none is started that the
 # deadline would cut off). Set from the pilot.
-RUN_MINUTES = {"qnehvi": 40.0, "qnparego": 40.0, "sequential": 40.0, "nsga2": 1.0, "motpe": 2.0, "random": 1.0}
+RUN_MINUTES = {"qnehvi": 20.0, "qnparego": 20.0, "sequential": 20.0, "nsga2": 1.0, "motpe": 2.0, "random": 1.0}
 
 
 def parse_seeds(text):
