@@ -71,7 +71,11 @@ def train_one(args):
 
 CALIB_LAYERS = (2, 3, 4, 5)
 CALIB_WIDTHS = (0.25, 0.625, 1.0)
-CLOUD_COLUMNS = ["arch", "precision", "cycles", "time_ms", "flash_kib", "ram_kib"]
+# From the Optimize step (no board needed): macc, flash and RAM, in KiB as the Cloud prints them.
+CLOUD_OPTIMIZE_COLUMNS = ["macc", "flash_weights_kib", "flash_total_kib", "ram_activations_kib", "ram_total_kib"]
+# From the Benchmark step (needs a board); left blank for models that do not fit on it.
+CLOUD_BENCHMARK_COLUMNS = ["cycles", "time_ms"]
+CLOUD_COLUMNS = ["arch", "precision"] + CLOUD_OPTIMIZE_COLUMNS + CLOUD_BENCHMARK_COLUMNS
 
 
 def calib_archs():
@@ -102,7 +106,8 @@ def cloud_calib(args):
     if not results.exists("cloud_calibration"):
         print("Upload each file below to the STM32Cube.AI Developer Cloud, benchmark it on the board named in\n"
               f"{results.path('cloud_board')}, and record one row per model in\n{results.path('cloud_calibration')}\n"
-              f"with columns: {', '.join(CLOUD_COLUMNS)} (precision is fp32 or int8).")
+              f"with columns: {', '.join(CLOUD_COLUMNS)} (precision is fp32 or int8; "
+              f"{', '.join(CLOUD_BENCHMARK_COLUMNS)} stay blank for a model the board cannot hold).")
         for name, prec in expected:
             print(f"  {results.path('calib_model', arch=name, prec=prec)}")
         return
@@ -110,7 +115,9 @@ def cloud_calib(args):
     missing = [c for c in CLOUD_COLUMNS if c not in df.columns]
     have = set(zip(df.get("arch", []), df.get("precision", [])))
     todo = [e for e in expected if e not in have]
-    print(f"columns missing: {missing or 'none'} | rows {len(df)} of {len(expected)} | models still to record: {len(todo)}")
+    ran = int(df["cycles"].notna().sum()) if "cycles" in df.columns else 0
+    print(f"columns missing: {missing or 'none'} | rows {len(df)} of {len(expected)} | with cycles {ran} | "
+          f"models still to record: {len(todo)}")
     for name, prec in todo:
         print(f"  {name} {prec}")
 
