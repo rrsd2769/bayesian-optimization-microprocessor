@@ -13,6 +13,7 @@ from src.evaluator.device import STM32F446RE, Device
 from src.evaluator.energy import IDLE_MODES
 from src.evaluator.memory import MemoryCalibration
 from src.evaluator.rtos_sim import Workload
+from src.evaluator.taskgen import generated_workload
 
 
 @dataclass(frozen=True)
@@ -69,3 +70,7 @@ class Scenario:
         """Scale the literature overheads r16 - 1 and r4 - 1 (int16 over int8, int4 over int8) by the given factors."""
         c = self.cycle_cal
         return replace(self, cycle_cal=replace(c, r16=1 + r16 * (c.r16 - 1), r4=1 + r4 * (c.r4 - 1)))
+
+    def with_generated_tasks(self, utilization: float, n: int = 2, f_ref_mhz: float = 180.0, seed: int = 20261011) -> "Scenario":
+        """Replace the periodic tasks by a Kim 2021 harmonicT2 set (see taskgen.py)."""
+        return replace(self, workload=generated_workload(self.workload, n, utilization, f_ref_mhz * 1e6, seed))
