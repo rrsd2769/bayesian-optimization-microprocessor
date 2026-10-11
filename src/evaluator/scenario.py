@@ -3,7 +3,7 @@ Scenario: every science constant the evaluator uses, as one frozen value.
 
 Cost models take their constants from a Scenario, never from module-level constants, so the sensitivity
 runs (kernel costs x0.5 / x2, other task sets, Stop-mode idle, other limits) are new Scenario values and
-need no code changes. The workload (task set and kernel costs) is added in Phase 3.
+need no code changes. The workload holds the task set and the kernel costs.
 """
 from dataclasses import dataclass, field, replace
 
@@ -11,6 +11,7 @@ from src.evaluator.cycles import CycleCalibration
 from src.evaluator.device import STM32F446RE, Device
 from src.evaluator.energy import IDLE_MODES
 from src.evaluator.memory import MemoryCalibration
+from src.evaluator.rtos_sim import Workload
 
 
 @dataclass(frozen=True)
@@ -29,6 +30,7 @@ class Scenario:
     limits: Limits = field(default_factory=Limits)
     cycle_cal: CycleCalibration = field(default_factory=CycleCalibration)
     memory_cal: MemoryCalibration = field(default_factory=MemoryCalibration)
+    workload: Workload = field(default_factory=Workload)
 
     def __post_init__(self):
         if self.idle_mode not in IDLE_MODES:
