@@ -121,6 +121,13 @@ def test_cycles_monotone_in_macs_for_fixed_bit_width():
         assert all(x <= y for x, y in zip(c, c[1:]))
 
 
+def test_literature_ratios_are_the_sourced_values():
+    cal = CycleCalibration()
+    assert cal.r16 == pytest.approx(1223.513 / 1034.033)    # Novac 2021
+    assert cal.r4 == 1.14                                     # Capotondi 2020, "up to 14%"
+    assert cal.cpm(16) == pytest.approx(cal.cpm8 * 1.183, rel=1e-3) and cal.cpm(4) == pytest.approx(cal.cpm8 * 1.14)
+
+
 def test_cycles_cover_layers_and_unsupported_bits():
     two = ONE_CONV * 2
     assert cycles.inference_cycles(two, 8, 0, CAL) == 2 * (1000 * 2.0 + 100) + 1000
