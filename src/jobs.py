@@ -50,6 +50,7 @@ class Deadline:
 class Job:
     key: str
     output: Path
+    meta: object = None     # anything the stage's work() needs, not used by the runner
 
 
 @dataclass
