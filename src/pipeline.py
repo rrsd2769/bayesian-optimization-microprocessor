@@ -133,6 +133,99 @@ def calibrate(args):
                   f"LOO mean {m['loo_mean_rel_err']:.1%} max {m['loo_max_rel_err']:.1%}")
 
 
+# ── Phase 4 ──────────────────────────────────────────────────────────────────
+
+ACC_GRID_LAYERS = (2, 3, 4, 5)
+ACC_GRID_WIDTHS = (0.25, 0.4375, 0.625, 0.8125, 1.0)
+SEED_NOISE_ARCHS = ((2, 0.25), (3, 0.625), (5, 1.0))
+QAT_PILOT_ARCHS = ((2, 0.25), (5, 1.0))
+QAT_PILOT_EPOCHS = 10
+
+
+def float_epochs():
+    from config import NUM_EPOCHS
+    return results.load("train_bench")["epochs"] if results.exists("train_bench") else NUM_EPOCHS
+
+
+@stage("qat-pilot", "4-bit QAT for up to 10 epochs on two architectures; choose the QAT epoch count",
+       ["qat_pilot_run", "qat_pilot"])
+def qat_pilot(args):
+    from config import CHECKPOINT_DIR, DEVICE
+    from src.network.arch import Arch
+    from src.network.measure import qat_curve
+    from src.network.quantize import pick_qat_epochs
+    from src.network.train import load_data
+    cache = {}
+    epochs = float_epochs()
+
+    def work(job, tmp, deadline):
+        if "data" not in cache:
+            cache["data"] = load_data(DEVICE)
+        tmp.write_text(json.dumps(qat_curve(job.meta, 1, epochs, QAT_PILOT_EPOCHS, cache["data"], DEVICE,
+                                            CHECKPOINT_DIR, deadline), indent=2, sort_keys=True))
+
+    jobs = [Job(Arch(L, w).name, results.path("qat_pilot_run", arch=Arch(L, w).name), meta=Arch(L, w))
+            for L, w in QAT_PILOT_ARCHS]
+    summary = run_jobs("qat-pilot", jobs, work, args.minutes)
+    if summary.finished:
+        runs = [results.load("qat_pilot_run", arch=j.key) for j in jobs]
+        chosen = pick_qat_epochs([r["val_accs"] for r in runs])
+        results.save("qat_pilot", dict(qat_epochs=chosen, pilot_epochs=QAT_PILOT_EPOCHS, runs=runs))
+        for r in runs:
+            print(f"{r['arch']}: float {r['float_val_acc']:.4f} | 4-bit before QAT {r['ptq4_val_acc']:.4f} | QAT per epoch "
+                  + " ".join(f"{a:.4f}" for a in r["val_accs"]))
+        print(f"chosen QAT epochs: {chosen}" + (" (pilot did not converge within 10)" if chosen == QAT_PILOT_EPOCHS else ""))
+    return summary
+
+
+def accuracy_jobs():
+    from src.network.arch import Arch
+    grid = [(Arch(L, w), 1) for L in ACC_GRID_LAYERS for w in ACC_GRID_WIDTHS]
+    repeats = [(Arch(L, w), s) for L, w in SEED_NOISE_ARCHS for s in (2, 3)]
+    return [Job(f"{a.name}_seed{s}", results.path("accuracy_run", arch=a.name, seed=s), meta=(a, s)) for a, s in grid + repeats]
+
+
+def merge_accuracy(jobs):
+    import pandas as pd
+    parts = [pd.read_csv(j.output) for j in jobs if j.output.exists()]
+    if parts:
+        results.save("accuracy_measurements", pd.concat(parts, ignore_index=True))
+    return len(parts)
+
+
+@stage("accuracy", "train the 26 networks and measure validation accuracy at b = 32, 16, 8, 4",
+       ["accuracy_run", "accuracy_measurements"])
+def accuracy(args):
+    from config import CHECKPOINT_DIR, DEVICE
+    from src.network.measure import measure_arch
+    from src.network.train import load_data
+    if not results.exists("qat_pilot"):
+        raise SystemExit("run the qat-pilot stage first: it sets the number of QAT epochs")
+    epochs, qat_epochs = float_epochs(), results.load("qat_pilot")["qat_epochs"]
+    cache = {}
+
+    def work(job, tmp, deadline):
+        if "data" not in cache:
+            cache["data"] = load_data(DEVICE)
+        arch, seed = job.meta
+        measure_arch(arch, seed, epochs, qat_epochs, cache["data"], DEVICE, CHECKPOINT_DIR, deadline).to_csv(tmp, index=False)
+
+    jobs = accuracy_jobs()
+    summary = run_jobs("accuracy", jobs, work, args.minutes)
+    print(f"accuracy_measurements: {merge_accuracy(jobs)} of {len(jobs)} trainings merged")
+    return summary
+
+
+@stage("validate-accuracy", "seed noise and the 32-to-4-bit accuracy drop", ["accuracy_validation"])
+def validate_accuracy(args):
+    from src.report.accuracy_validation import validate
+    out = validate(results.load("accuracy_measurements"))
+    results.save("accuracy_validation", out)
+    for arch, per_b in out["seed_noise"].items():
+        print(f"{arch}: seed std (points) " + " ".join(f"b{b}={v['std'] * 100:.2f}" for b, v in sorted(per_b.items(), key=lambda kv: int(kv[0]))))
+    print(f"architectures with 4-bit accuracy below 32-bit: {out['n_with_drop_above_zero']} of {out['n_architectures']}")
+
+
 @stage("status", "list every stage, its artifacts and whether they exist", [])
 def status(args):
     for name, s in STAGES.items():

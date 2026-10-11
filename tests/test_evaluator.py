@@ -198,3 +198,36 @@ def test_race_to_idle_table(capsys):
         best = DEV.points[e.index(min(ok))].f_mhz
         print(f"{Arch(L, w).name:<12}" + "".join(f"{('overload' if x is None else f'{x:.0f}'):>13}" for x in e) + f"   {best} MHz")
         assert ok and all(math.isfinite(x) and x > 0 for x in ok)
+
+
+# ── accuracy table (Phase 4) ─────────────────────────────────────────────────
+
+def _acc_table():
+    import pandas as pd
+    from src.evaluator.accuracy import AccuracyTable
+    rows = [(f"L{L}_w{w:g}", 1, b, 0.5 + 0.01 * L + 0.1 * w + 0.001 * b, 50, 1.0)
+            for L in (2, 3) for w in (0.25, 0.4375) for b in (4, 8, 16, 32)]
+    rows.append(("L2_w0.25", 2, 32, 0.123, 50, 1.0))      # another seed: not in the table
+    return AccuracyTable(pd.DataFrame(rows, columns=["arch", "seed", "b", "val_acc", "epochs", "wall_s"]))
+
+
+def test_accuracy_lookup_returns_measured_values_exactly():
+    t = _acc_table()
+    assert len(t) == 16
+    for L in (2, 3):
+        for w in (0.25, 0.4375):
+            for b in (4, 8, 16, 32):
+                assert t.acc(L, w, b) == 0.5 + 0.01 * L + 0.1 * w + 0.001 * b
+    assert t.acc(2, 0.25, 32) != 0.123
+
+
+def test_accuracy_lookup_raises_off_grid_and_for_unmeasured():
+    t = _acc_table()
+    with pytest.raises(ValueError):
+        t.acc(2, 0.3, 8)
+    with pytest.raises(ValueError):
+        t.acc(6, 0.25, 8)
+    with pytest.raises(ValueError):
+        t.acc(2, 0.25, 12)
+    with pytest.raises(KeyError):
+        t.acc(4, 0.25, 8)
