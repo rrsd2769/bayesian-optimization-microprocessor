@@ -1,0 +1,10 @@
+{
+  "arch": "L5_w1",
+  "budget_min": 12.0,
+  "device": "mps",
+  "epochs": 50,
+  "first_epoch_s": 7.101697206497192,
+  "fits_budget": true,
+  "sec_per_epoch": 5.529813647270203,
+  "timed_epochs": 3
+}
