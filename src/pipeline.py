@@ -316,6 +316,45 @@ def sensitivity(args):
     return summary
 
 
+# ── Phase 6 ──────────────────────────────────────────────────────────────────
+
+# Minutes of chunk time a run needs before it may start (a run cannot be resumed, so none is started that the
+# deadline would cut off). Set from the pilot.
+RUN_MINUTES = {"qnehvi": 40.0, "qnparego": 40.0, "sequential": 40.0, "nsga2": 1.0, "motpe": 2.0, "random": 1.0}
+
+
+def parse_seeds(text):
+    """'1-20' or '3,5,9' -> [ints]."""
+    out = []
+    for part in text.split(","):
+        lo, _, hi = part.partition("-")
+        out += list(range(int(lo), int(hi or lo) + 1))
+    return out
+
+
+def _compare_args(p):
+    from src.search.harness import METHODS
+    p.add_argument("--method", nargs="+", default=list(METHODS), choices=METHODS)
+    p.add_argument("--seeds", default="1-20", help="e.g. 1-20 or 1,2,5")
+    p.add_argument("--budget", type=int, default=100)
+
+
+@stage("compare", "run the search methods: one CSV per method and seed with a running hypervolume", ["run"], _compare_args)
+def compare(args):
+    from src.jobs import DeadlineReached
+    from src.search.harness import run_search
+
+    def work(job, tmp, deadline):
+        method, seed = job.meta
+        if deadline.remaining_s() < RUN_MINUTES[method] * 60:
+            raise DeadlineReached()
+        run_search(method, seed, args.budget).frame.to_csv(tmp, index=False)
+
+    seeds = parse_seeds(args.seeds)
+    jobs = [Job(f"{m}/seed{s}", results.path("run", method=m, seed=s), meta=(m, s)) for s in seeds for m in args.method]
+    return run_jobs("compare", jobs, work, args.minutes)
+
+
 @stage("status", "list every stage, its artifacts and whether they exist", [])
 def status(args):
     for name, s in STAGES.items():

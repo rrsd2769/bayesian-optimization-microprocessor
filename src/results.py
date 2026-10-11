@@ -55,6 +55,8 @@ REGISTRY = {a.name: a for a in [
     Artifact("reference_front_summary", "reference_front_summary.json", "json", "front"),
     Artifact("sensitivity_case", "sensitivity/{case}.json", "json", "sensitivity"),
     Artifact("sensitivity", "sensitivity.csv", "csv", "sensitivity"),
+    # Phase 6
+    Artifact("run", "runs/{method}/seed{seed}.csv", "csv", "compare"),
 ]}
 
 
