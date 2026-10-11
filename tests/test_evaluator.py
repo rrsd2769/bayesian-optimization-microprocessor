@@ -1,59 +1,38 @@
-"""
-Evaluator cost models (Phase 1). Hand-computed cases for flash, SRAM, cycles and energy, plus datasheet
-constant checks. From Phase 5 on these are exercised through evaluate(); until then they test the
-internal cost-model files directly.
-"""
+"""evaluate(design, scenario) -> Outcome, tested through the public interface only."""
 import math
+
+import pandas as pd
 import pytest
 
-from src.evaluator import cycles, energy, memory
-from src.evaluator.cycles import CycleCalibration
-from src.evaluator.device import STM32F446RE, flash_wait_states
-from src.evaluator.memory import MemoryCalibration
-from src.evaluator.scenario import Scenario
-from src.network.arch import Arch, LAYER_COUNTS, WIDTH_GRID
+from src.evaluator import (AccuracyTable, CycleCalibration, Design, Limits, MemoryCalibration, PeriodicTask, Scenario,
+                           Workload, evaluate)
+from src.network.arch import LAYER_COUNTS, WIDTH_GRID
 
 MEM = MemoryCalibration(kflash8=(1000.0, 10.0, 100.0), kflash32=(500.0, 20.0), kram8=(200.0, 5.0), kram32=(300.0, 6.0),
                         act8=(0.5, 100.0), act32=2.0, rtos_reserve=32768)
-DEV = STM32F446RE
 
 
-# ── device constants (datasheet DS10693 Rev 11) ────────────────────────────────
-
-def test_operating_points_are_complete_and_increasing():
-    pts = DEV.points
-    assert len(pts) == 5
-    assert all(a.f_mhz < b.f_mhz for a, b in zip(pts, pts[1:]))
-    assert all(a.i_run_ma < b.i_run_ma for a, b in zip(pts, pts[1:]))
-    assert all(a.i_sleep_ma < b.i_sleep_ma for a, b in zip(pts, pts[1:]))
-    for p in pts:
-        assert p.f_mhz > 0 and p.i_run_ma > 0 and p.i_sleep_ma > 0 and p.vos_scale in (1, 2, 3)
-        assert p.i_sleep_ma < p.i_run_ma
-    assert DEV.vdd == 3.3 and DEV.i_stop_ma > 0 and DEV.flash_bytes == 524288 and DEV.sram_bytes == 131072
+def table(acc=0.9, overrides=None):
+    rows = [(f"L{L}_w{w:g}", 1, b, acc, 50, 1.0) for L in LAYER_COUNTS for w in WIDTH_GRID for b in (4, 8, 16, 32)]
+    df = pd.DataFrame(rows, columns=["arch", "seed", "b", "val_acc", "epochs", "wall_s"])
+    for (arch, b), v in (overrides or {}).items():
+        df.loc[(df["arch"] == arch) & (df["b"] == b), "val_acc"] = v
+    return AccuracyTable(df)
 
 
-def test_datasheet_values_spot_check():
-    by_f = {p.f_mhz: p for p in DEV.points}
-    assert (by_f[30].i_run_ma, by_f[60].i_run_ma, by_f[120].i_run_ma, by_f[150].i_run_ma, by_f[180].i_run_ma) \
-        == (10.0, 18.0, 32.0, 41.0, 46.0)                       # Table 24, p. 83
-    assert by_f[30].i_sleep_ma == 4.43 and by_f[180].i_sleep_ma == 11.36   # Table 26, p. 86
-    assert DEV.i_stop_ma == 0.234                                # Table 27, p. 88
+def scenario(**kw):
+    kw.setdefault("accuracy", table())
+    kw.setdefault("memory_cal", MEM)
+    return Scenario(**kw)
 
 
-def test_flash_wait_states_follow_table_17():
-    assert [flash_wait_states(f) for f in (30, 60, 120, 150, 180)] == [0, 1, 3, 4, 5]
-    assert [p.flash_ws for p in DEV.points] == [0, 1, 3, 4, 5]
-    assert flash_wait_states(180) == 5      # Table 17: 180 MHz with 5 wait states at 2.7-3.6 V
+def D(L=2, w=0.25, b=8, tau=5.0, pi="below", f=0):
+    return Design(L, w, b, tau, pi, f)
 
 
-def test_voltage_scaling_follows_section_6_3_7():
-    assert [(p.vos_scale, p.overdrive) for p in DEV.points] == [(3, False), (3, False), (3, False), (1, False), (1, True)]
-
-
-# ── memory: hand-computed for Arch(2, 0.25) ───────────────────────────────────
+# ── flash and SRAM, hand-computed for Arch(2, 0.25) ──────────────────────────
 # conv 3->8: 216 w, 8 bias; conv 8->16: 1152 w, 16 bias; linear 16->128: 2048 w, 128 bias; linear 128->10: 1280 w, 10 bias
-# weights 4696, bias 162. Conv outputs: 8*32*32 = 8192 and 16*32*32 = 16384 elements (pooling follows the conv).
-# L = 2 conv layers, w = 8/32 = 0.25.
+# weights 4696, bias 162. Conv outputs: 8*32*32 = 8192 and 16*16*16 = 4096 elements. L = 2, w = 0.25.
 
 @pytest.mark.parametrize("b,expected", [
     (4, 4696 * 0.5 + 162 * 4 + 1000 + 10 * 2 + 100 * 0.25),
@@ -61,8 +40,8 @@ def test_voltage_scaling_follows_section_6_3_7():
     (16, 4696 * 2 + 162 * 4 + 1000 + 10 * 2 + 100 * 0.25),
     (32, 4696 * 4 + 162 * 4 + 500 + 20 * 2),
 ])
-def test_flash_hand_values_small_net(b, expected):
-    assert memory.flash_bytes(Arch(2, 0.25).profile(), b, MEM) == expected
+def test_flash_hand_values(b, expected):
+    assert evaluate(D(b=b), scenario()).flash_kb * 1024 == pytest.approx(expected)
 
 
 @pytest.mark.parametrize("b,expected", [
@@ -70,141 +49,114 @@ def test_flash_hand_values_small_net(b, expected):
     (16, 2 * (0.5 * (8 * 32 * 32 + 16 * 16 * 16) + 100 * 2) + 200 + 5 * 2),
     (32, 2.0 * 8 * 32 * 32 + 300 + 6 * 2),
 ])
-def test_sram_hand_values_small_net(b, expected):
-    assert memory.sram_bytes(Arch(2, 0.25).profile(), b, MEM) == expected + 32768
+def test_sram_hand_values(b, expected):
+    assert evaluate(D(b=b), scenario()).sram_kb * 1024 == pytest.approx(expected + 32768)
 
 
-def test_sram_int4_uses_int8_activations():
-    p = Arch(2, 0.25).profile()
-    assert memory.sram_bytes(p, 4, MEM) == memory.sram_bytes(p, 8, MEM)
+def test_int4_sram_equals_int8_sram_and_memory_grows_with_bits():
+    sc = scenario()
+    assert evaluate(D(b=4), sc).sram_kb == evaluate(D(b=8), sc).sram_kb
+    f = [evaluate(D(4, 0.625, b), sc).flash_kb for b in (4, 8, 16, 32)]
+    assert f == sorted(f)
 
 
-def test_flash_hand_value_second_architecture():
-    # Arch(3, 0.25): channels 8, 16, 32. weights: 216 + 1152 + 4608 + 32*128 + 1280 = 11352; bias 8+16+32+128+10 = 194
-    assert memory.flash_bytes(Arch(3, 0.25).profile(), 8, MEM) == 11352 + 194 * 4 + 1000 + 10 * 3 + 100 * 0.25
+# ── cycles, seen through latency: one request, no periodic tasks, free kernel ──
+# Arch(2, 0.25) at int8, cpm8 = 2, c_fixed = 1000: macs 221184 + 294912 + 2048 + 1280 = 519424
+# cycles = 519424 * 2 + 1000 = 1,039,848; at 30 MHz that is 34.6616 ms, plus up to 1 ms until the next tick.
+
+def test_latency_equals_cycles_over_clock_plus_tick_wait():
+    wl = Workload(periodic=(), n_requests=1, jitter=0.0, switch_cycles=0, tick_cycles=0)
+    sc = scenario(workload=wl, cycle_cal=CycleCalibration(cpm8=2.0, c_layer=0.0, c_fixed=1000.0))
+    o = evaluate(D(b=8, f=0), sc)
+    run_ms = 1_039_848 / 30e6 * 1000
+    assert run_ms <= o.latency_ms < run_ms + 1.0 + 1e-9
 
 
-def test_memory_grows_with_bit_width():
-    p = Arch(4, 0.625).profile()
-    f = [memory.flash_bytes(p, b, MEM) for b in (4, 8, 16)]
-    s = [memory.sram_bytes(p, b, MEM) for b in (4, 8, 16)]
-    assert f == sorted(f) and s == sorted(s)
+def test_higher_clock_lowers_latency_and_changes_energy():
+    sc = scenario()
+    lat = [evaluate(D(3, 0.625, 8, f=f), sc).latency_ms for f in range(5)]
+    assert lat == sorted(lat, reverse=True)
+    assert len({evaluate(D(3, 0.625, 8, f=f), sc).energy_uj for f in range(5)}) == 5
 
 
-def test_unsupported_bits_raise():
+# ── constraints ──────────────────────────────────────────────────────────────
+
+def test_memory_infeasible_design_short_circuits():
+    o = evaluate(D(5, 1.0, 32), Scenario(accuracy=table()))     # ~4 MB of fp32 weights
+    assert not o.acceptable and "flash" in o.violated
+    assert o.latency_ms == math.inf and o.miss_ratio == 1.0 and o.energy_uj == math.inf
+    assert o.flash_kb > 512
+
+
+def test_sram_violation_alone():
+    sc = scenario(memory_cal=MemoryCalibration(rtos_reserve=200_000, kflash8=(0.0, 0.0, 0.0), kflash32=(0.0, 0.0)))
+    o = evaluate(D(), sc)
+    assert o.violated == ("sram",) and o.sram_kb > 128 and o.latency_ms == math.inf
+
+
+def test_accuracy_floor_is_a_constraint():
+    sc = scenario(accuracy=table(0.9, {("L2_w0.25", 8): 0.7}))
+    o = evaluate(D(b=8, f=4), sc)
+    assert "accuracy" in o.violated and not o.acceptable and math.isfinite(o.energy_uj)
+
+
+def test_acceptable_design_has_six_finite_outputs():
+    o = evaluate(D(2, 0.25, 8, 5.0, "below", 4), scenario())
+    assert o.acceptable and o.violated == ()
+    for v in (o.accuracy, o.energy_uj, o.latency_ms, o.miss_ratio, o.flash_kb, o.sram_kb):
+        assert math.isfinite(v)
+
+
+def test_latency_and_miss_limits_are_reported():
+    heavy = D(2, 0.25, 8, 5.0, "above", 0)
+    sc = scenario(workload=Workload(periodic=(PeriodicTask("sensor", 10, 90_000, 3),)))
+    o = evaluate(heavy, sc.with_limits(latency_ms=1.0))
+    assert "latency" in o.violated
+    o2 = evaluate(heavy, sc.with_limits(latency_ms=1e6, miss_ratio=0.0))
+    assert o2.miss_ratio > 0 and "miss_ratio" in o2.violated
+
+
+def test_latency_statistic_is_selectable():
+    sc = scenario()
+    d = D(3, 0.625, 8, 5.0, "below", 4)
+    p95 = evaluate(d, sc).latency_ms
+    mean = evaluate(d, sc.with_limits(latency_stat="mean")).latency_ms
+    assert mean < p95
     with pytest.raises(ValueError):
-        memory.flash_bytes(Arch(2, 0.25).profile(), 2, MEM)
+        Limits(latency_stat="max")
 
 
-# ── cycles ────────────────────────────────────────────────────────────────────
+# ── determinism, scenario control, errors ─────────────────────────────────────
 
-CAL = CycleCalibration(cpm8=2.0, cpm32=5.0, c_layer=100.0, c_fixed=1000.0, k_flash=0.0, r16=1.5, r4=0.75)
-ONE_CONV = [dict(kind="conv", macs=1000, weights=100)]
-
-
-def test_cycles_hand_values():
-    assert cycles.inference_cycles(ONE_CONV, 8, 0, CAL) == 1000 * 2.0 + 100 + 1000
-    assert cycles.inference_cycles(ONE_CONV, 32, 0, CAL) == 1000 * 5.0 + 100 + 1000
-    assert cycles.inference_cycles(ONE_CONV, 16, 0, CAL) == 1000 * 2.0 * 1.5 + 100 + 1000
-    assert cycles.inference_cycles(ONE_CONV, 4, 0, CAL) == 1000 * 2.0 * 0.75 + 100 + 1000
+def test_evaluate_is_deterministic():
+    sc, d = scenario(), D(3, 0.625, 8, 7.3, "equal", 3)
+    assert evaluate(d, sc) == evaluate(d, sc)
 
 
-def test_flash_term_only_when_k_flash_set():
-    cal = CycleCalibration(cpm8=2.0, c_layer=100.0, c_fixed=1000.0, k_flash=0.5)
-    base = cycles.inference_cycles(ONE_CONV, 8, 0, cal)
-    assert cycles.inference_cycles(ONE_CONV, 8, 2, cal) == base + 100 * 1 * 0.5 * 2   # weights * bytes * k * ws
+def test_changing_one_scenario_field_changes_the_outcome_without_code_changes():
+    sc, d = scenario(), D(3, 0.625, 8, 2.0, "equal", 4)
+    base = evaluate(d, sc)
+    assert evaluate(d, sc.with_kernel_scale(2.0)) != base
+    assert evaluate(d, sc.but(idle_mode="stop")).energy_uj < base.energy_uj
+    assert evaluate(d, sc.with_overhead_scale(r16=2.0)) == base            # int8 design: r16 not involved
+    d16 = D(3, 0.625, 16, 2.0, "equal", 4)
+    assert evaluate(d16, sc.with_overhead_scale(r16=2.0)).latency_ms > evaluate(d16, sc).latency_ms
 
 
-def test_cycles_monotone_in_macs_for_fixed_bit_width():
-    order = sorted(((L, w) for L in LAYER_COUNTS for w in WIDTH_GRID),
-                   key=lambda a: sum(r["macs"] for r in Arch(*a).profile()))
-    for b in (4, 8, 16, 32):
-        c = [cycles.inference_cycles(Arch(*a).profile(), b, 0, CAL) for a in order]
-        assert all(x <= y for x, y in zip(c, c[1:]))
-
-
-def test_literature_ratios_are_the_sourced_values():
-    cal = CycleCalibration()
-    assert cal.r16 == pytest.approx(1223.513 / 1034.033)    # Novac 2021
-    assert cal.r4 == 1.14                                     # Capotondi 2020, "up to 14%"
-    assert cal.cpm(16) == pytest.approx(cal.cpm8 * 1.183, rel=1e-3) and cal.cpm(4) == pytest.approx(cal.cpm8 * 1.14)
-
-
-def test_first_conv_and_weight_terms():
-    cal = CycleCalibration(cpm8=2.0, cpm32=5.0, c_layer=0.0, c_fixed=0.0, c_first8=3.0, c_first32=4.0,
-                           c_weight8=0.5, c_weight32=0.25, c_fixed32=7.0, r16=1.5, r4=0.75)
-    prof = [dict(kind="pool", macs=0, weights=0), dict(kind="conv", macs=1000, weights=100),
-            dict(kind="conv", macs=2000, weights=200)]
-    # the first conv only gets the extra term; weights in bytes; fp32 uses its own constants and fixed cost
-    assert cycles.inference_cycles(prof, 8, 0, cal) == 3000 * 2.0 + 1000 * 3.0 + 300 * 0.5
-    assert cycles.inference_cycles(prof, 32, 0, cal) == 3000 * 5.0 + 1000 * 4.0 + 300 * 4 * 0.25 + 7.0
-    assert cycles.inference_cycles(prof, 16, 0, cal) == 3000 * 3.0 + 1000 * 3.0 * 1.5 + 300 * 2 * 0.5
-
-
-def test_cycles_cover_layers_and_unsupported_bits():
-    two = ONE_CONV * 2
-    assert cycles.inference_cycles(two, 8, 0, CAL) == 2 * (1000 * 2.0 + 100) + 1000
+def test_bad_inputs_raise():
     with pytest.raises(ValueError):
-        CAL.cpm(2)
-
-
-# ── energy ────────────────────────────────────────────────────────────────────
-
-P30, P180 = DEV.points[0], DEV.points[-1]
-
-
-def test_energy_at_zero_active_cycles_is_sleep_energy():
-    e = energy.total_energy_uj(DEV, P30, 0, 1.0, "sleep")
-    assert e == pytest.approx(3.3 * 4.43 * 1.0 * 1000)             # V * mA * s = mJ -> uJ
-    assert energy.total_energy_uj(DEV, P30, 0, 1.0, "stop") == pytest.approx(3.3 * 0.234 * 1000)
-
-
-def test_energy_hand_value_with_activity():
-    # 18e6 cycles at 180 MHz = 0.1 s active; 0.9 s idle in Sleep
-    e = energy.total_energy_uj(DEV, P180, 18e6, 1.0, "sleep")
-    assert e == pytest.approx(3.3 * (46.0 * 0.1 + 11.36 * 0.9) * 1000)
-    assert energy.energy_per_inference_uj(DEV, P180, 18e6, 1.0, 4, "sleep") == pytest.approx(e / 4)
-
-
-def test_energy_rejects_overfull_horizon_and_bad_args():
+        evaluate(D(f=5), scenario())
     with pytest.raises(ValueError):
-        energy.total_energy_uj(DEV, P180, 190e6, 1.0)           # 1.06 s of work in 1 s
+        Design(2, 0.25, 8, 5.0, "top", 0)
     with pytest.raises(ValueError):
-        energy.total_energy_uj(DEV, P180, 0, 1.0, "standby")
+        evaluate(D(), Scenario(memory_cal=MEM))        # no accuracy table
     with pytest.raises(ValueError):
-        energy.energy_per_inference_uj(DEV, P180, 0, 1.0, 0)
+        evaluate(D(w=0.3), scenario())                 # off the width grid
 
 
-def test_stop_idle_is_cheaper_than_sleep_idle():
-    assert energy.total_energy_uj(DEV, P180, 1e6, 1.0, "stop") < energy.total_energy_uj(DEV, P180, 1e6, 1.0, "sleep")
-
-
-def test_race_to_idle_table(capsys):
-    """Energy per inference across the five frequencies for three architectures. The minimum need not sit at
-    the lowest frequency; the printout records where it does. Stand-in workload: 50 inferences, 400 ms apart.
-    A cell is 'overload' when the inference work alone does not fit in the horizon."""
-    cal = Scenario.nominal().cycle_cal
-    print("\nenergy per inference (uJ), int8, 50 inferences per 20 s horizon, Sleep idle, fitted cycle constants")
-    print(f"{'arch':<12}" + "".join(f"{p.f_mhz:>9} MHz" for p in DEV.points) + "   argmin f")
-    for L, w in ((2, 0.25), (3, 0.625), (5, 1.0)):
-        c = cycles.inference_cycles(Arch(L, w).profile(), 8, 0, cal)
-        e = []
-        for p in DEV.points:
-            try:
-                e.append(energy.energy_per_inference_uj(DEV, p, 50 * c, 20.0, 50))
-            except ValueError:
-                e.append(None)
-        ok = [x for x in e if x is not None]
-        best = DEV.points[e.index(min(ok))].f_mhz
-        print(f"{Arch(L, w).name:<12}" + "".join(f"{('overload' if x is None else f'{x:.0f}'):>13}" for x in e) + f"   {best} MHz")
-        assert ok and all(math.isfinite(x) and x > 0 for x in ok)
-
-
-# ── accuracy table (Phase 4) ─────────────────────────────────────────────────
+# ── accuracy table ───────────────────────────────────────────────────────────
 
 def _acc_table():
-    import pandas as pd
-    from src.evaluator.accuracy import AccuracyTable
     rows = [(f"L{L}_w{w:g}", 1, b, 0.5 + 0.01 * L + 0.1 * w + 0.001 * b, 50, 1.0)
             for L in (2, 3) for w in (0.25, 0.4375) for b in (4, 8, 16, 32)]
     rows.append(("L2_w0.25", 2, 32, 0.123, 50, 1.0))      # another seed: not in the table

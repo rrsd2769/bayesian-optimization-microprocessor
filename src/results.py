@@ -48,6 +48,13 @@ REGISTRY = {a.name: a for a in [
     Artifact("accuracy_run", "accuracy/{arch}_seed{seed}.csv", "csv", "accuracy"),
     Artifact("accuracy_measurements", "accuracy_measurements.csv", "csv", "accuracy"),
     Artifact("accuracy_validation", "accuracy_validation.json", "json", "validate-accuracy"),
+    # Phase 5
+    Artifact("front_block", "front/L{L}_b{b}.csv", "csv", "front"),
+    Artifact("hv_reference", "hv_reference.json", "json", "front"),
+    Artifact("reference_front", "reference_pareto_front.csv", "csv", "front"),
+    Artifact("reference_front_summary", "reference_front_summary.json", "json", "front"),
+    Artifact("sensitivity_case", "sensitivity/{case}.json", "json", "sensitivity"),
+    Artifact("sensitivity", "sensitivity.csv", "csv", "sensitivity"),
 ]}
 
 
