@@ -1,0 +1,36 @@
+{
+  "case": "latency_mean",
+  "front_composition": {
+    "L": {
+      "4": 2,
+      "5": 3
+    },
+    "b": {
+      "16": 1,
+      "8": 4
+    },
+    "f_idx": {
+      "2": 4,
+      "3": 1
+    },
+    "pi": {
+      "below": 2,
+      "equal": 3
+    }
+  },
+  "grid_size": 12000,
+  "hypervolume": {
+    "A": 832.1155693423734,
+    "B": 975.0321549023731
+  },
+  "n_acceptable": 663,
+  "n_front": 5,
+  "rejected": {
+    "accuracy": 4200,
+    "flash": 2250,
+    "latency": 5712,
+    "memory_infeasible": 3150,
+    "miss_ratio": 3732,
+    "sram": 1800
+  }
+}

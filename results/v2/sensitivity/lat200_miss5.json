@@ -1,0 +1,37 @@
+{
+  "case": "lat200_miss5",
+  "front_composition": {
+    "L": {
+      "4": 3,
+      "5": 3
+    },
+    "b": {
+      "16": 1,
+      "8": 5
+    },
+    "f_idx": {
+      "1": 1,
+      "2": 3,
+      "3": 1,
+      "4": 1
+    },
+    "pi": {
+      "equal": 6
+    }
+  },
+  "grid_size": 12000,
+  "hypervolume": {
+    "A": 911.5792939072728,
+    "B": 1079.491572858633
+  },
+  "n_acceptable": 812,
+  "n_front": 6,
+  "rejected": {
+    "accuracy": 4200,
+    "flash": 2250,
+    "latency": 5473,
+    "memory_infeasible": 3150,
+    "miss_ratio": 3464,
+    "sram": 1800
+  }
+}
