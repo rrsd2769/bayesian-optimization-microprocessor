@@ -18,10 +18,17 @@ The other two bit-widths are literature estimates, labelled as such in the paper
                          ratio is 44.915 / 43.003 = 1.044. Limit: that framework has no SIMD int8 path (the paper
                          says int16 and int8 run the same instructions on 32-bit registers), whereas STM32Cube.AI
                          int8 uses SIMD kernels, so R16 may understate the int16 cost relative to Cube.AI int8.
-    cpm4  = cpm8 * R4    R4 is the int4 over int8 kernel ratio of CMix-NN, Capotondi et al. 2020, IEEE TCAS-II
-                         67(5):871-875, 10.1109/tcsii.2020.2983648, measured on a Cortex-M7 (STM32H7); the core
-                         difference is stated in the paper. PLACEHOLDER (1.0) until the table is read from the
-                         journal PDF; the table and page then go here.
+    cpm4  = cpm8 * R4    R4 = 1.14, the overhead CMix-NN, Capotondi et al. 2020, IEEE TCAS-II 67(5):871-875,
+                         10.1109/tcsii.2020.2983648, reports for 4-bit weights with 8-bit activations (w4a8)
+                         over w8a8: "up to 14%" extra time from unpacking 4-bit weights in the inner loop
+                         (Section IV-A, text beside Figure 4, p. 4 of the accepted manuscript). Figure 4 shows
+                         the whole-layer effect is smaller, about 1.07 to 1.08 (read off the chart, MobilenetV1
+                         192_0.5 layers 3 and 27, STM32H743), so 1.14 is the stated upper end. Cross-check with
+                         Table III (same library, per-channel ICN quantization, different networks): w4a4 on
+                         224_0.75 runs at 0.30 MAC/cycle against 0.33 and 0.35 for w8a8 on 192_0.5 and 160_0.5,
+                         a ratio of 1.10 to 1.17. Cortex-M7, not M4; the core difference is stated in the paper.
+                         Read from the accepted manuscript (Bologna institutional repository); the published
+                         IEEE pagination may differ.
 A Cortex-M4 TRM instruction count is only a cross-check, never reported as a source.
 
 Every constant marked PLACEHOLDER is overwritten by the Phase 2 fit or the literature read.
@@ -39,7 +46,7 @@ class CycleCalibration:
     c_fixed: float = 20000.0   # PLACEHOLDER, fitted in Phase 2
     k_flash: float = 0.0       # cycles per weight byte per wait state; 0 unless Phase 2 needs it
     r16: float = 1223.513 / 1034.033   # Novac 2021, see module docstring
-    r4: float = 1.0            # PLACEHOLDER pending Capotondi 2020, see module docstring
+    r4: float = 1.14           # Capotondi 2020, see module docstring
     source: str = "placeholder"
 
     def cpm(self, b: int) -> float:
