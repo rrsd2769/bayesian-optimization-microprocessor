@@ -5,10 +5,16 @@ Inference cycles on the Cortex-M4F.
                  macs * cpm(b)                          compute
                + weights * bytes(b) * k_flash * ws      flash read stall, only if calibration says so
                + c_layer )                              per-layer fixed cost
-           + c_fixed                                    per-inference fixed cost
+           + first_conv_macs * c_first(b)               extra cost of the 3-input-channel first conv
+           + weights * bytes(b) * c_weight(b)           cost per weight byte, independent of the clock
+           + c_fixed(b)                                 per-inference fixed cost
 
-Calibration (Phase 2 fits these on STM32Cube.AI Developer Cloud benchmarks of int8 and fp32 models):
-    cpm8, cpm32, c_layer, c_fixed, and k_flash only if the leave-one-out int8 error exceeds 10 % without it.
+Calibration (Phase 2 fits these on ST Edge AI Developer Cloud benchmarks of 12 int8 and 12 fp32 models on an
+STM32F469I-DISCO at 180 MHz, 5 wait states; src/evaluator/calibrate.py, non-negative least squares on relative
+error): cpm8, cpm32, c_first8, c_first32, c_weight8, c_weight32, c_fixed, c_fixed32. A term the data does not
+support fits to 0. All benchmarks ran at one clock, so a dependence of cycles on flash wait states cannot be
+identified: c_weight is kept clock-independent and k_flash stays 0 (the datasheet says the ART accelerator hides
+sequential-read wait states). The int4 and int16 terms are the int8 terms times the literature ratios below.
 The other two bit-widths are literature estimates, labelled as such in the paper:
     cpm16 = cpm8 * R16   R16 = 1223.513 / 1034.033 = 1.183, int16 over int8 inference time of the same
                          framework (MicroAI) on a Cortex-M4F, Nucleo-L452RE at 48 MHz, ResNet with 80 filters.
@@ -42,8 +48,13 @@ BITS = (4, 8, 16, 32)
 class CycleCalibration:
     cpm8: float = 1.0          # PLACEHOLDER, fitted in Phase 2 (cycles per MAC at int8)
     cpm32: float = 4.0         # PLACEHOLDER, fitted in Phase 2 (cycles per MAC at fp32)
-    c_layer: float = 2000.0    # PLACEHOLDER, fitted in Phase 2
-    c_fixed: float = 20000.0   # PLACEHOLDER, fitted in Phase 2
+    c_layer: float = 2000.0    # PLACEHOLDER, 0 in the Phase 2 fit (not identified separately from c_fixed)
+    c_fixed: float = 20000.0   # PLACEHOLDER, fitted in Phase 2 (int4, int8, int16)
+    c_first8: float = 0.0      # extra cycles per MAC of the first conv, int8 family
+    c_first32: float = 0.0
+    c_weight8: float = 0.0     # cycles per weight byte
+    c_weight32: float = 0.0
+    c_fixed32: float = None    # None: same as c_fixed
     k_flash: float = 0.0       # cycles per weight byte per wait state; 0 unless Phase 2 needs it
     r16: float = 1223.513 / 1034.033   # Novac 2021, see module docstring
     r4: float = 1.14           # Capotondi 2020, see module docstring
@@ -60,6 +71,17 @@ class CycleCalibration:
             return self.cpm8 * self.r4
         raise ValueError(f"unsupported bit-width {b}")
 
+    def c_first(self, b: int) -> float:
+        if b == 32:
+            return self.c_first32
+        return self.c_first8 * self.cpm(b) / self.cpm8       # scaled like cpm: r16, r4
+
+    def c_weight(self, b: int) -> float:
+        return self.c_weight32 if b == 32 else self.c_weight8
+
+    def fixed(self, b: int) -> float:
+        return self.c_fixed if b != 32 or self.c_fixed32 is None else self.c_fixed32
+
 
 def weight_bytes_per_param(b: int) -> float:
     return b / 8.0
@@ -68,7 +90,12 @@ def weight_bytes_per_param(b: int) -> float:
 def inference_cycles(profile: list, b: int, ws: int, cal: CycleCalibration) -> int:
     cpm = cal.cpm(b)
     flash = cal.k_flash * ws * weight_bytes_per_param(b)
-    total = cal.c_fixed
+    wbytes = weight_bytes_per_param(b)
+    total = cal.fixed(b)
+    first_done = False
     for r in profile:
-        total += r["macs"] * cpm + r["weights"] * flash + cal.c_layer
+        total += r["macs"] * cpm + r["weights"] * (flash + wbytes * cal.c_weight(b)) + cal.c_layer
+        if r["kind"] == "conv" and not first_done:
+            total += r["macs"] * cal.c_first(b)
+            first_done = True
     return int(round(total))

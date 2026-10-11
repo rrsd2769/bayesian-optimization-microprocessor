@@ -36,8 +36,13 @@ class Scenario:
 
     @staticmethod
     def nominal() -> "Scenario":
-        """The paper's main case. Phase 2 makes this load the fitted calibration."""
-        return Scenario()
+        """The paper's main case, with the Phase 2 fitted calibration when the calibrate stage has run."""
+        from src import results
+        from src.evaluator.calibrate import from_json
+        if not (results.exists("cycle_calibration") and results.exists("memory_calibration")):
+            return Scenario()
+        return Scenario(cycle_cal=from_json(CycleCalibration, results.load("cycle_calibration")),
+                        memory_cal=from_json(MemoryCalibration, results.load("memory_calibration")))
 
     def but(self, **changes) -> "Scenario":
         """A sensitivity variant: same scenario with some fields replaced."""

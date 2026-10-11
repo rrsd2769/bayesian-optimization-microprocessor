@@ -122,6 +122,17 @@ def import_cloud(args):
     print(f"cloud_calibration now has {len(merged)} of {len(hashes)} models")
 
 
+@stage("calibrate", "fit the cycle and memory models to the Cloud benchmarks", ["cycle_calibration", "memory_calibration"])
+def calibrate(args):
+    from src.evaluator.calibrate import fit_cycles, fit_memory, to_json
+    cloud = results.load("cloud_calibration")
+    for (cal, report), name in ((fit_cycles(cloud), "cycle_calibration"), (fit_memory(cloud), "memory_calibration")):
+        results.save(name, to_json(cal, report))
+        for target, m in report.items():
+            print(f"{target:<12} n={m['n']} R2={m['r2']:.4f} fit max err {m['max_rel_err']:.1%} "
+                  f"LOO mean {m['loo_mean_rel_err']:.1%} max {m['loo_max_rel_err']:.1%}")
+
+
 @stage("status", "list every stage, its artifacts and whether they exist", [])
 def status(args):
     for name, s in STAGES.items():

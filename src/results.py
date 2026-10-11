@@ -40,6 +40,8 @@ REGISTRY = {a.name: a for a in [
     Artifact("calib_model", "exports/calib/{arch}_{prec}.onnx", "file", "export-calib"),
     Artifact("cloud_board", "cloud_board.json", "json", "cloud-calib"),
     Artifact("cloud_calibration", "cloud_calibration.csv", "csv", "import-cloud"),
+    Artifact("cycle_calibration", "cycle_calibration.json", "json", "calibrate"),
+    Artifact("memory_calibration", "memory_calibration.json", "json", "calibrate"),
 ]}
 
 

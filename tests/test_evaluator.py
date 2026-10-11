@@ -13,7 +13,8 @@ from src.evaluator.memory import MemoryCalibration
 from src.evaluator.scenario import Scenario
 from src.network.arch import Arch, LAYER_COUNTS, WIDTH_GRID
 
-MEM = MemoryCalibration(code_allowance=1000, scratch_columns=2.0, rtos_reserve=32768)
+MEM = MemoryCalibration(kflash8=(1000.0, 10.0, 100.0), kflash32=(500.0, 20.0), kram8=(200.0, 5.0), kram32=(300.0, 6.0),
+                        act8=(0.5, 100.0), act32=2.0, rtos_reserve=32768)
 DEV = STM32F446RE
 
 
@@ -51,25 +52,26 @@ def test_voltage_scaling_follows_section_6_3_7():
 
 # ── memory: hand-computed for Arch(2, 0.25) ───────────────────────────────────
 # conv 3->8: 216 w, 8 bias; conv 8->16: 1152 w, 16 bias; linear 16->128: 2048 w, 128 bias; linear 128->10: 1280 w, 10 bias
-# weights 4696, bias 162, output channels with parameters 162.
+# weights 4696, bias 162. Conv outputs: 8*32*32 = 8192 and 16*32*32 = 16384 elements (pooling follows the conv).
+# L = 2 conv layers, w = 8/32 = 0.25.
 
 @pytest.mark.parametrize("b,expected", [
-    (4, 4696 * 0.5 + 162 * 4 + 162 * 4 + 1000),      # 4644
-    (8, 4696 * 1 + 162 * 4 + 162 * 4 + 1000),        # 6992
-    (16, 4696 * 2 + 162 * 4 + 162 * 4 + 1000),       # 11688
-    (32, 4696 * 4 + 162 * 4 + 0 + 1000),             # 20432, no scales at fp32
+    (4, 4696 * 0.5 + 162 * 4 + 1000 + 10 * 2 + 100 * 0.25),
+    (8, 4696 * 1 + 162 * 4 + 1000 + 10 * 2 + 100 * 0.25),
+    (16, 4696 * 2 + 162 * 4 + 1000 + 10 * 2 + 100 * 0.25),
+    (32, 4696 * 4 + 162 * 4 + 500 + 20 * 2),
 ])
 def test_flash_hand_values_small_net(b, expected):
     assert memory.flash_bytes(Arch(2, 0.25).profile(), b, MEM) == expected
 
 
-@pytest.mark.parametrize("b,peak", [
-    (8, (3 * 32 * 32 + 8 * 32 * 32) * 1 + 2 * 3 * 9 * 3 * 0 + 2 * 9 * 3 * 1),     # conv1: 11264 + 54 = 11318
-    (16, (3 * 32 * 32 + 8 * 32 * 32) * 2 + 2 * 9 * 3 * 2),                          # 22528 + 108 = 22636
-    (32, (3 * 32 * 32 + 8 * 32 * 32) * 4 + 2 * 9 * 3 * 4),                          # 45056 + 216 = 45272
+@pytest.mark.parametrize("b,expected", [
+    (8, 0.5 * (8 * 32 * 32 + 16 * 16 * 16) + 100 * 2 + 200 + 5 * 2),
+    (16, 2 * (0.5 * (8 * 32 * 32 + 16 * 16 * 16) + 100 * 2) + 200 + 5 * 2),
+    (32, 2.0 * 8 * 32 * 32 + 300 + 6 * 2),
 ])
-def test_sram_hand_values_small_net(b, peak):
-    assert memory.sram_bytes(Arch(2, 0.25).profile(), b, MEM) == peak + 32768
+def test_sram_hand_values_small_net(b, expected):
+    assert memory.sram_bytes(Arch(2, 0.25).profile(), b, MEM) == expected + 32768
 
 
 def test_sram_int4_uses_int8_activations():
@@ -79,13 +81,13 @@ def test_sram_int4_uses_int8_activations():
 
 def test_flash_hand_value_second_architecture():
     # Arch(3, 0.25): channels 8, 16, 32. weights: 216 + 1152 + 4608 + 32*128 + 1280 = 11352; bias 8+16+32+128+10 = 194
-    assert memory.flash_bytes(Arch(3, 0.25).profile(), 8, MEM) == 11352 + 194 * 4 + 194 * 4 + 1000
+    assert memory.flash_bytes(Arch(3, 0.25).profile(), 8, MEM) == 11352 + 194 * 4 + 1000 + 10 * 3 + 100 * 0.25
 
 
 def test_memory_grows_with_bit_width():
     p = Arch(4, 0.625).profile()
-    f = [memory.flash_bytes(p, b, MEM) for b in (4, 8, 16, 32)]
-    s = [memory.sram_bytes(p, b, MEM) for b in (4, 8, 16, 32)]
+    f = [memory.flash_bytes(p, b, MEM) for b in (4, 8, 16)]
+    s = [memory.sram_bytes(p, b, MEM) for b in (4, 8, 16)]
     assert f == sorted(f) and s == sorted(s)
 
 
@@ -128,6 +130,17 @@ def test_literature_ratios_are_the_sourced_values():
     assert cal.cpm(16) == pytest.approx(cal.cpm8 * 1.183, rel=1e-3) and cal.cpm(4) == pytest.approx(cal.cpm8 * 1.14)
 
 
+def test_first_conv_and_weight_terms():
+    cal = CycleCalibration(cpm8=2.0, cpm32=5.0, c_layer=0.0, c_fixed=0.0, c_first8=3.0, c_first32=4.0,
+                           c_weight8=0.5, c_weight32=0.25, c_fixed32=7.0, r16=1.5, r4=0.75)
+    prof = [dict(kind="pool", macs=0, weights=0), dict(kind="conv", macs=1000, weights=100),
+            dict(kind="conv", macs=2000, weights=200)]
+    # the first conv only gets the extra term; weights in bytes; fp32 uses its own constants and fixed cost
+    assert cycles.inference_cycles(prof, 8, 0, cal) == 3000 * 2.0 + 1000 * 3.0 + 300 * 0.5
+    assert cycles.inference_cycles(prof, 32, 0, cal) == 3000 * 5.0 + 1000 * 4.0 + 300 * 4 * 0.25 + 7.0
+    assert cycles.inference_cycles(prof, 16, 0, cal) == 3000 * 3.0 + 1000 * 3.0 * 1.5 + 300 * 2 * 0.5
+
+
 def test_cycles_cover_layers_and_unsupported_bits():
     two = ONE_CONV * 2
     assert cycles.inference_cycles(two, 8, 0, CAL) == 2 * (1000 * 2.0 + 100) + 1000
@@ -168,17 +181,17 @@ def test_stop_idle_is_cheaper_than_sleep_idle():
 
 def test_race_to_idle_table(capsys):
     """Energy per inference across the five frequencies for three architectures. The minimum need not sit at
-    the lowest frequency; the printout records where it does. Stand-in workload: 50 inferences, 200 ms apart.
+    the lowest frequency; the printout records where it does. Stand-in workload: 50 inferences, 400 ms apart.
     A cell is 'overload' when the inference work alone does not fit in the horizon."""
     cal = Scenario.nominal().cycle_cal
-    print("\nenergy per inference (uJ), int8, 50 inferences per 10 s horizon, Sleep idle, placeholder cycle constants")
+    print("\nenergy per inference (uJ), int8, 50 inferences per 20 s horizon, Sleep idle, fitted cycle constants")
     print(f"{'arch':<12}" + "".join(f"{p.f_mhz:>9} MHz" for p in DEV.points) + "   argmin f")
     for L, w in ((2, 0.25), (3, 0.625), (5, 1.0)):
         c = cycles.inference_cycles(Arch(L, w).profile(), 8, 0, cal)
         e = []
         for p in DEV.points:
             try:
-                e.append(energy.energy_per_inference_uj(DEV, p, 50 * c, 10.0, 50))
+                e.append(energy.energy_per_inference_uj(DEV, p, 50 * c, 20.0, 50))
             except ValueError:
                 e.append(None)
         ok = [x for x in e if x is not None]
