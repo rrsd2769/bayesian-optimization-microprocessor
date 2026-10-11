@@ -71,13 +71,6 @@ def train_one(args):
 
 CALIB_LAYERS = (2, 3, 4, 5)
 CALIB_WIDTHS = (0.25, 0.625, 1.0)
-# From the Optimize step (no board needed): macc, flash and RAM, in KiB as the Cloud prints them.
-CLOUD_OPTIMIZE_COLUMNS = ["macc", "flash_weights_kib", "flash_total_kib", "ram_activations_kib", "ram_total_kib"]
-# From the Benchmark step (needs a board); left blank for models that do not fit on it.
-CLOUD_BENCHMARK_COLUMNS = ["cycles", "time_ms"]
-CLOUD_COLUMNS = ["arch", "precision"] + CLOUD_OPTIMIZE_COLUMNS + CLOUD_BENCHMARK_COLUMNS
-
-
 def calib_archs():
     from src.network.arch import Arch
     return [Arch(L, w) for L in CALIB_LAYERS for w in CALIB_WIDTHS]
@@ -99,27 +92,35 @@ def export_calib(args):
     return run_jobs("export-calib", jobs, work, args.minutes)
 
 
-@stage("cloud-calib", "manual: benchmark the exported models on the Cloud, then check the results file",
+@stage("cloud-calib", "manual: benchmark the models on the Cloud, then check coverage",
        ["cloud_board", "cloud_calibration"])
 def cloud_calib(args):
     expected = [(a.name, p) for a in calib_archs() for p in ("fp32", "int8")]
     if not results.exists("cloud_calibration"):
-        print("Upload each file below to the STM32Cube.AI Developer Cloud, benchmark it on the board named in\n"
-              f"{results.path('cloud_board')}, and record one row per model in\n{results.path('cloud_calibration')}\n"
-              f"with columns: {', '.join(CLOUD_COLUMNS)} (precision is fp32 or int8; "
-              f"{', '.join(CLOUD_BENCHMARK_COLUMNS)} stay blank for a model the board cannot hold).")
+        print(f"Benchmark each model below on the board named in {results.path('cloud_board')}, tick the rows on the "
+              "Results step, press 'Export as CSV', then run:\n  python -m src.pipeline import-cloud --csv <file> [<file> ...]")
         for name, prec in expected:
             print(f"  {results.path('calib_model', arch=name, prec=prec)}")
         return
     df = results.load("cloud_calibration")
-    missing = [c for c in CLOUD_COLUMNS if c not in df.columns]
-    have = set(zip(df.get("arch", []), df.get("precision", [])))
-    todo = [e for e in expected if e not in have]
-    ran = int(df["cycles"].notna().sum()) if "cycles" in df.columns else 0
-    print(f"columns missing: {missing or 'none'} | rows {len(df)} of {len(expected)} | with cycles {ran} | "
-          f"models still to record: {len(todo)}")
+    todo = [e for e in expected if e not in set(zip(df["arch"], df["precision"]))]
+    print(f"benchmarked {len(df)} of {len(expected)} models | still to do: {len(todo)}")
     for name, prec in todo:
         print(f"  {name} {prec}")
+
+
+@stage("import-cloud", "read Cloud 'Export as CSV' files into cloud_calibration", ["cloud_calibration"],
+       lambda p: p.add_argument("--csv", nargs="+", required=True))
+def import_cloud(args):
+    from src.evaluator.cloud import import_cloud_csv, sha256_file
+    hashes = {sha256_file(results.path("calib_model", arch=a.name, prec=p)): (a.name, p)
+              for a in calib_archs() for p in ("fp32", "int8")}
+    existing = results.load("cloud_calibration") if results.exists("cloud_calibration") else None
+    merged, problems = import_cloud_csv(args.csv, hashes, existing)
+    results.save("cloud_calibration", merged)
+    for msg in problems:
+        print("problem:", msg)
+    print(f"cloud_calibration now has {len(merged)} of {len(hashes)} models")
 
 
 @stage("status", "list every stage, its artifacts and whether they exist", [])

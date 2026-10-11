@@ -1,0 +1,2 @@
+arch,precision,cycles,duration_ms,frequency_mhz,total_flash_bytes,total_ram_bytes,weights_bytes,activations_bytes,kernel_flash_bytes,kernel_ram_bytes,benchmark_id,created_at
+L2_w0.25,int8,2305914.0,12.810633385553956,180.0,23221.0,9368.0,5344.0,6800.0,17877.0,2568.0,b03bdc11-4aca-41bc-bbbb-3041e845bf55,Sun Oct 11 2026 12:17:26 GMT+0530 (India Standard Time)
