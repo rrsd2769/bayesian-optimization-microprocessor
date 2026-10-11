@@ -92,8 +92,7 @@ def export_calib(args):
     return run_jobs("export-calib", jobs, work, args.minutes)
 
 
-@stage("cloud-calib", "manual: benchmark the models on the Cloud, then check coverage",
-       ["cloud_board", "cloud_calibration"])
+@stage("cloud-calib", "manual: benchmark the models on the Cloud, then check coverage", ["cloud_board"])
 def cloud_calib(args):
     expected = [(a.name, p) for a in calib_archs() for p in ("fp32", "int8")]
     if not results.exists("cloud_calibration"):
