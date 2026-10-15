@@ -14,6 +14,7 @@ import logging
 import sys
 
 from src import results
+from src.evaluator import TABLE_SEED
 from src.jobs import Job, run_jobs
 
 STAGES = {}   # name -> dict(fn, help, artifacts, add_args)
@@ -92,6 +93,76 @@ def export_calib(args):
     return run_jobs("export-calib", jobs, work, args.minutes)
 
 
+# ── Phase 7 ──────────────────────────────────────────────────────────────────
+
+VALIDATION_WIDTHS = (0.4375, 0.8125)    # the two grid widths that Phase 2 did not benchmark
+def validation_archs():
+    from src.network.arch import Arch
+    return [Arch(L, w) for w in VALIDATION_WIDTHS for L in CALIB_LAYERS]
+
+
+@stage("export-validate", "write int8 ONNX models of the 8 architectures not used in calibration", ["validation_model"])
+def export_validate(args):
+    from src.network.export import calibration_images
+    cache = {}
+
+    def work(job, tmp, deadline):
+        if "calib" not in cache:
+            cache["calib"] = calibration_images()
+        job.meta.onnx(8, tmp, cache["calib"])
+
+    jobs = [Job(f"{a.name}_int8", results.path("validation_model", arch=a.name, prec="int8"), meta=a)
+            for a in validation_archs()]
+    code = run_jobs("export-validate", jobs, work, args.minutes)
+    print(f"Benchmark each model on the board in {results.path('cloud_board')}, export the CSV, then run:\n"
+          "  python -m src.pipeline import-cloud --set validation --csv <file> [<file> ...]")
+    for a in validation_archs():
+        print(f"  {results.path('validation_model', arch=a.name, prec='int8')}")
+    return code
+
+
+@stage("validate-hw", "predicted against measured Cloud cycles, flash and RAM on held-out models", ["hw_validation"])
+def validate_hw(args):
+    from src.evaluator import Scenario
+    from src.report.hw_validation import validate
+    out = validate(results.load("cloud_validation"), results.load("cloud_calibration"), Scenario.nominal())
+    results.save("hw_validation", out)
+    for part in ("held_out", "in_sample"):
+        print(f"{part} (n = {out[part]['n']}): " + " | ".join(
+            f"{q} MAE {v['mae_pct']:.2f}% max {v['max_pct']:.2f}% bias {v['mean_signed_pct']:+.2f}%"
+            for q, v in out[part]["summary"].items()))
+
+
+@stage("test-accuracy", "CIFAR-10 test accuracy of the reference-front designs, evaluated once", ["test_accuracy"])
+def test_accuracy(args):
+    """The only code path that reads the CIFAR-10 test split. Refuses to run twice."""
+    import pandas as pd
+    from config import CHECKPOINT_DIR, DEVICE
+    from src.network.arch import Arch
+    from src.network.measure import calibration_images
+    from src.network.quantize import quantize
+    from src.network.train import evaluate_accuracy, load_best_weights, load_data, load_test
+    if results.exists("test_accuracy"):
+        raise SystemExit("test_accuracy exists: the test split is evaluated once; delete the file to repeat it deliberately")
+    front = results.load("reference_front")
+    data, (tx, ty) = load_data(DEVICE), load_test(DEVICE)
+    rows = []
+    for _, r in front.iterrows():
+        arch, b = Arch(int(r["L"]), float(r["w"])), int(r["b"])
+        model = load_best_weights(CHECKPOINT_DIR / f"{arch.name}_seed{TABLE_SEED}.pt", arch, DEVICE)
+        if b == 32:
+            net = model.eval()
+        else:
+            net = quantize(model, b, calibration_images(data))
+        rows.append(dict(arch=arch.name, b=b, predicted_val_accuracy=float(r["accuracy"]),
+                         test_accuracy=evaluate_accuracy(net, tx, ty)))
+    out = dict(table_seed=TABLE_SEED, n_test=int(len(ty)), designs=rows,
+               mean_gap_points=float(sum((x["test_accuracy"] - x["predicted_val_accuracy"]) for x in rows) / len(rows) * 100))
+    results.save("test_accuracy", out)
+    for x in rows:
+        print(f"{x['arch']} b={x['b']}: validation {x['predicted_val_accuracy']:.4f} -> test {x['test_accuracy']:.4f}")
+
+
 @stage("cloud-calib", "manual: benchmark the models on the Cloud, then check coverage", ["cloud_board"])
 def cloud_calib(args):
     expected = [(a.name, p) for a in calib_archs() for p in ("fp32", "int8")]
@@ -108,18 +179,22 @@ def cloud_calib(args):
         print(f"  {name} {prec}")
 
 
-@stage("import-cloud", "read Cloud 'Export as CSV' files into cloud_calibration", ["cloud_calibration"],
-       lambda p: p.add_argument("--csv", nargs="+", required=True))
+@stage("import-cloud", "read Cloud 'Export as CSV' files into cloud_calibration or cloud_validation", ["cloud_calibration", "cloud_validation"],
+       lambda p: (p.add_argument("--csv", nargs="+", required=True),
+                  p.add_argument("--set", choices=("calibration", "validation"), default="calibration")))
 def import_cloud(args):
     from src.evaluator import import_cloud_csv, sha256_file
-    hashes = {sha256_file(results.path("calib_model", arch=a.name, prec=p)): (a.name, p)
-              for a in calib_archs() for p in ("fp32", "int8")}
-    existing = results.load("cloud_calibration") if results.exists("cloud_calibration") else None
+    if args.set == "validation":
+        name, model, models = "cloud_validation", "validation_model", [(a, "int8") for a in validation_archs()]
+    else:
+        name, model, models = "cloud_calibration", "calib_model", [(a, p) for a in calib_archs() for p in ("fp32", "int8")]
+    hashes = {sha256_file(results.path(model, arch=a.name, prec=p)): (a.name, p) for a, p in models}
+    existing = results.load(name) if results.exists(name) else None
     merged, problems = import_cloud_csv(args.csv, hashes, existing)
-    results.save("cloud_calibration", merged)
+    results.save(name, merged)
     for msg in problems:
         print("problem:", msg)
-    print(f"cloud_calibration now has {len(merged)} of {len(hashes)} models")
+    print(f"{name} now has {len(merged)} of {len(hashes)} models")
 
 
 @stage("calibrate", "fit the cycle and memory models to the Cloud benchmarks", ["cycle_calibration", "memory_calibration"])

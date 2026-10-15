@@ -1,0 +1,31 @@
+{
+  "designs": [
+    {
+      "arch": "L4_w0.25",
+      "b": 8,
+      "predicted_val_accuracy": 0.7672,
+      "test_accuracy": 0.7735
+    },
+    {
+      "arch": "L4_w0.4375",
+      "b": 8,
+      "predicted_val_accuracy": 0.8246,
+      "test_accuracy": 0.8229
+    },
+    {
+      "arch": "L5_w0.25",
+      "b": 8,
+      "predicted_val_accuracy": 0.7916,
+      "test_accuracy": 0.783
+    },
+    {
+      "arch": "L5_w0.25",
+      "b": 16,
+      "predicted_val_accuracy": 0.7946,
+      "test_accuracy": 0.7838
+    }
+  ],
+  "mean_gap_points": -0.3699999999999981,
+  "n_test": 10000,
+  "table_seed": 1
+}

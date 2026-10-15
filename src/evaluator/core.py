@@ -15,7 +15,7 @@ from functools import lru_cache
 
 from src.evaluator.cycles import inference_cycles
 from src.evaluator.energy import total_energy_uj
-from src.evaluator.memory import flash_bytes, sram_bytes
+from src.evaluator.memory import HARNESS_FLASH, HARNESS_RAM, activation_bytes, flash_bytes, kernel_ram, sram_bytes
 from src.evaluator.rtos_sim import PI_LEVELS, simulate
 from src.evaluator.scenario import Scenario
 from src.network.arch import Arch
@@ -79,3 +79,14 @@ def evaluate(design: Design, scenario: Scenario = None) -> Outcome:
     latency = sim.p95_latency_ms if lim.latency_stat == "p95" else sim.mean_latency_ms
     violated += [name for name, bad in (("latency", latency > lim.latency_ms), ("miss_ratio", sim.miss_ratio > lim.miss_ratio)) if bad]
     return Outcome(acc, energy, latency, sim.miss_ratio, flash / 1024.0, sram / 1024.0, not violated, tuple(violated))
+
+
+def predict_benchmark(num_layers: int, width_mult: float, b: int, scenario: Scenario = None) -> dict:
+    """What the Cloud benchmark of this network should report on the 180 MHz board: cycles, total flash and total RAM
+    in bytes. Flash and RAM include the harness offsets that the calibration removed (no RTOS reserve)."""
+    sc = scenario if scenario is not None else Scenario.nominal()
+    profile = _profile(num_layers, width_mult)
+    point = next(p for p in sc.device.points if p.f_mhz == 180)
+    return dict(cycles=inference_cycles(profile, b, point.flash_ws, sc.cycle_cal),
+                flash_bytes=flash_bytes(profile, b, sc.memory_cal) + HARNESS_FLASH,
+                ram_bytes=activation_bytes(profile, b, sc.memory_cal) + kernel_ram(profile, b, sc.memory_cal) + HARNESS_RAM)

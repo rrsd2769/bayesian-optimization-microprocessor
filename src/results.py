@@ -42,6 +42,11 @@ REGISTRY = {a.name: a for a in [
     Artifact("cloud_calibration", "cloud_calibration.csv", "csv", "import-cloud"),
     Artifact("cycle_calibration", "cycle_calibration.json", "json", "calibrate"),
     Artifact("memory_calibration", "memory_calibration.json", "json", "calibrate"),
+    # Phase 7
+    Artifact("validation_model", "exports/validation/{arch}_{prec}.onnx", "file", "export-validate"),
+    Artifact("cloud_validation", "cloud_validation.csv", "csv", "import-cloud"),
+    Artifact("hw_validation", "hw_validation.json", "json", "validate-hw"),
+    Artifact("test_accuracy", "test_accuracy.json", "json", "test-accuracy"),
     # Phase 4
     Artifact("qat_pilot_run", "qat_pilot/{arch}.json", "json", "qat-pilot"),
     Artifact("qat_pilot", "qat_pilot.json", "json", "qat-pilot"),
