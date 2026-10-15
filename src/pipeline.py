@@ -355,6 +355,17 @@ def compare(args):
     return run_jobs("compare", jobs, work, args.minutes)
 
 
+@stage("stats", "summarise the comparison runs: hypervolume, IGD, evaluations to 90 percent, Friedman, Wilcoxon", ["comparison_summary"])
+def stats_stage(args):
+    from src.search.stats import run
+    out = run()
+    results.save("comparison_summary", out)
+    print(f"runs per method: " + " ".join(f"{m}={len(s)}" for m, s in out["seeds_per_method"].items()) + f" | seeds common to all: {len(out['common_seeds'])}")
+    for m, pm in out["per_method"].items():
+        h = pm["hv_pct_A_at_100"]
+        print(f"{m:<11} HV%A@100 median {h['median']:.1f} (IQR {h['q1']:.1f}-{h['q3']:.1f})")
+
+
 @stage("status", "list every stage, its artifacts and whether they exist", [])
 def status(args):
     for name, s in STAGES.items():
