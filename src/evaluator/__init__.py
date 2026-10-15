@@ -10,13 +10,13 @@ from src.evaluator.calibrate import fit_cycles as fit_cycle_calibration
 from src.evaluator.calibrate import fit_memory as fit_memory_calibration
 from src.evaluator.calibrate import to_json as calibration_to_json
 from src.evaluator.cloud import import_cloud_csv, sha256_file
-from src.evaluator.core import Design, Outcome, evaluate
+from src.evaluator.core import Design, Outcome, evaluate, predict_benchmark
 from src.evaluator.cycles import CycleCalibration
 from src.evaluator.device import STM32F446RE
 from src.evaluator.memory import MemoryCalibration
 from src.evaluator.rtos_sim import PI_LEVELS, PeriodicTask, Workload
 from src.evaluator.scenario import Limits, Scenario
 
-__all__ = ["evaluate", "Design", "Outcome", "Scenario", "Limits", "AccuracyTable", "CycleCalibration",
+__all__ = ["evaluate", "predict_benchmark", "Design", "Outcome", "Scenario", "Limits", "AccuracyTable", "CycleCalibration",
            "TABLE_SEED", "MemoryCalibration", "Workload", "PeriodicTask", "PI_LEVELS", "STM32F446RE",
            "fit_cycle_calibration", "fit_memory_calibration", "calibration_to_json", "import_cloud_csv", "sha256_file"]
