@@ -1,5 +1,6 @@
 """The search harness and the method adapters, through run_search / ask / tell."""
 import numpy as np
+import pandas as pd
 import pytest
 
 from src.evaluator import Design, Scenario
@@ -98,3 +99,61 @@ def test_sequential_switches_stage(monkeypatch):
     assert (first["time_slice_ms"] == 10.0).all() and (first["freq_idx"] == 4).all() and (first["priority"] == 1).all()
     nets = set(zip(first["num_layers"], first["width_mult"], first["quant_bits"]))
     assert set(zip(second["num_layers"], second["width_mult"], second["quant_bits"])) <= nets
+
+
+# ── metrics and statistics ───────────────────────────────────────────────────
+
+REF_HV = dict(A=752.5, B=830.7)
+REF_FRONT = pd.DataFrame(dict(accuracy=[0.77, 0.82], energy_uj=[9600.0, 14800.0]))
+
+
+def fake_trace(final_hv, n=100, hit_at=None):
+    """A trace whose hypervolume climbs linearly to final_hv; hit_at forces the first evaluation reaching 90 %."""
+    hv = np.linspace(0, final_hv, n)
+    df = pd.DataFrame(dict(eval=np.arange(1, n + 1), hv_A=hv, hv_B=hv, accuracy=0.8, energy_uj=12000.0,
+                           acceptable=True, violated=""))
+    return df
+
+
+def test_hv_percent_and_evals_to():
+    from src.search import metrics
+    t = fake_trace(752.5)
+    assert metrics.hv_percent(t, "A", REF_HV)[-1] == pytest.approx(100.0)
+    k = metrics.evals_to(t, "A", REF_HV, 0.9)
+    assert t["hv_A"].iloc[int(k) - 1] >= 0.9 * 752.5 > t["hv_A"].iloc[int(k) - 2]
+    assert metrics.evals_to(fake_trace(100.0), "A", REF_HV) == float("inf")
+
+
+def test_igd_zero_on_the_reference_front_and_inf_without_acceptable():
+    from src.search import metrics
+    corners = CORNERS
+    t = pd.DataFrame(dict(eval=[1, 2], accuracy=[0.77, 0.82], energy_uj=[9600.0, 14800.0], acceptable=[True, True]))
+    assert metrics.igd(t, 2, REF_FRONT, corners) == pytest.approx(0.0)
+    assert metrics.igd(t.assign(acceptable=False), 2, REF_FRONT, corners) == float("inf")
+    assert metrics.igd(t, 1, REF_FRONT, corners) > 0
+
+
+def test_cliffs_delta_and_holm():
+    from src.search.stats import cliffs_delta, holm
+    assert cliffs_delta([3, 4], [1, 2]) == 1.0 and cliffs_delta([1, 2], [3, 4]) == -1.0
+    assert cliffs_delta([1, 2], [1, 2]) == 0.0
+    adj = holm(dict(a=0.01, b=0.04, c=0.03))
+    assert adj == dict(a=0.03, c=0.06, b=0.06)
+
+
+def test_summary_reports_p_with_its_minimum_and_uses_common_seeds():
+    from src.search.stats import summarise
+    methods = ["qnehvi", "random", "motpe"]
+    runs = {}
+    for s in range(1, 9):
+        runs[("qnehvi", s)] = fake_trace(750.0 + s)
+        runs[("random", s)] = fake_trace(400.0 + s)
+        runs[("motpe", s)] = fake_trace(600.0 + 10 * s)
+    runs[("qnehvi", 9)] = fake_trace(750.0)           # a seed missing for the others is left out of the tests
+    out = summarise(runs, methods, REF_HV, REF_FRONT, CORNERS)
+    assert out["common_seeds"] == list(range(1, 9))
+    w = out["tests"]["wilcoxon_qnehvi_vs_A"]["random"]
+    assert w["n_effective_pairs"] == 8 and w["min_achievable_p"] == pytest.approx(0.5 ** 8)
+    assert w["p"] == pytest.approx(0.5 ** 8) and w["cliffs_delta"] == 1.0 and w["p_holm"] >= w["p"]
+    assert out["tests"]["friedman_A"]["min_exact_p"] == pytest.approx((1 / 6) ** 7)
+    assert out["per_method"]["qnehvi"]["hv_pct_A_at_100"]["n"] == 9
