@@ -20,6 +20,7 @@
 \renewcommand{\thetable}{\arabic{table}}
 \renewcommand{\tablename}{Table}
 \definecolor{tblhead}{gray}{0.85}
+\graphicspath{{../figures/v2/}}
 
 \begin{document}
 
@@ -36,29 +37,22 @@ VIT Vellore, Vellore, Tamil Nadu, India}
 \maketitle
 
 \begin{abstract}
-The energy a microcontroller spends per inference depends on two groups
-of settings that are usually tuned apart: the depth, width, and weight
-precision of the convolutional network, and the time slice, policy, and
-clock scaling of the real-time scheduler that runs it. This study poses
-both groups as one six-dimensional design problem,
-$\mathbf{x}=(L,w,b,\tau,\pi,\delta)$, with continuous and discrete
-variables mixed, and searches it with Bayesian optimization. Accuracy
-comes from a regression surface fitted to six trained architectures,
-memory and energy from closed-form models, and latency from a
-discrete-event queueing simulation of a Cortex-M4 core. One Gaussian
-process per outcome (accuracy, energy, latency) steers a log-transformed
-expected improvement for energy minimization and a log-transformed
-expected hypervolume improvement for the accuracy--energy trade-off,
-under an accuracy floor of $0.75$ and a $100$\,ms latency limit. Every
-result is scored against a reference front built by enumerating
-$92{,}412$ designs with $207{,}927$ scheduler simulations.
-Single-objective search reaches the enumerated optimum of $0.76\,\mu$J
-per inference in 30 evaluations, where grid search needs 972.
-Multi-objective search recovers $98.4\%$ of the reference hypervolume in
-100 evaluations; random search at equal cost recovers $89.1\%$. Across 15
-repeated runs of 20 evaluations each, the directed search beats random
-search on every seed, at $94.5\%$ against $70.0\%$ of the reference on
-average (Cliff's $\delta=1.0$).
+The energy a microcontroller spends per inference depends on the
+network, through depth, width, and weight precision, and on the real-time
+operating system (RTOS) that schedules it, through time slice, priority, and
+clock. This study searches both as one six-variable problem, accuracy
+against energy per inference under accuracy, latency, deadline-miss, and
+memory constraints. Accuracy is a table of $26$ trainings with
+whole-network quantization at $4$, $8$, $16$, and $32$ bits. Cycles and
+memory are calibrated on an STM32 board, and on eight further networks the
+cycle predictions err by $4.8\%$ on average and $7.6\%$ at most. Latency and
+deadline misses come from a deterministic RTOS simulation, and energy from
+datasheet currents. Full enumeration of $12{,}000$ designs gives a reference
+front of four designs among $378$ acceptable ones. Six methods are compared
+over $20$ seeds at $100$ evaluations. Joint qNEHVI reaches a median of $100\%$
+of the reference hypervolume, and $90\%$ in $28$ evaluations; qNParEGO reaches
+$99.6\%$, MOTPE $91.0\%$, Random $74.8\%$, and NSGA-II $56.0\%$. A two-stage
+search that fixes the scheduler first stalls at $91.2\%$.
 \end{abstract}
 
 \begin{IEEEkeywords}

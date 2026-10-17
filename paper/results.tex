@@ -2,236 +2,156 @@
 % RESULTS AND DISCUSSION
 %=============================================================
 
-BO is compared against two baselines that bound the problem from either
-side. Grid search evaluates every point of a regular lattice of
-$3\times3\times4\times3\times3\times3=972$ designs. By definition it finds
-the lattice optimum of Eq.~\eqref{eq:soo} and bounds solution quality
-from above, at the cost of evaluating the whole lattice. Random search
-samples $\mathcal{X}$ uniformly with the same number of evaluations as BO,
-and shows what a directed strategy gains over blind sampling at equal
-cost. All three methods share the design space, the four evaluation
-models, and the acceptability rule. Each comparison thus isolates the
-search strategy and nothing else. The single-objective comparison gives
-30 evaluations each to BO and random search, against 972 for grid search.
-The multi-objective comparison gives 100 to each, since a front is harder
-to map than a single point and needs enough evaluations to hold more
-than a handful of non-dominated designs. Repeated-seed statistics come
-from two separate sweeps: 30 seeds of 30 trials for the single-objective
-problem and 15 seeds of 20 trials for the multi-objective one. The second
-sweep is shorter because $q$LogNEHVI grows costlier per trial as the
-discovered front grows, since it integrates hypervolume improvement over
-an ever finer partition of the objective space.
+\subsection{Reference Front and Coupling}
+\label{sec:front}
+\label{sec:sensitivity}
+Of the $12{,}000$ grid designs, $3{,}150$ break a memory limit and $378$
+($3.15\%$) meet every constraint. The latency limit fails $6{,}943$ designs,
+the deadline-miss limit $3{,}732$, and the accuracy floor $4{,}200$, with
+overlaps among them. The accuracy--energy front of the
+acceptable designs has four members, with accuracy from $0.7672$ to $0.8246$
+and energy from $9{,}610$ to $14{,}782\,\mu$J per inference. Corner A gives
+the front a hypervolume of $752.5$ and corner B $830.7$. The members use
+$L=4$ or $5$, weight precision $8$ (three designs) or $16$ (one), and no
+clock, priority, or time slice is shared by all four: the clock is
+$120$\,MHz for three designs and $180$\,MHz for one, the inference priority is
+\emph{below} for two and \emph{equal} for two, and the slices are $10.3$\,ms
+and $1.0$\,ms. No design with $b=32$ or $b=4$ is on the front. In this model
+the absence of $b=4$ follows from the accuracy loss at $4$ bits and from the
+int4 cycle estimate of $1.14$ times the int8 cycles, a literature value that
+was not measured (Fig.~\ref{fig:front} shows the front).
 
-The reference front follows the benchmark practice of scoring a search
-against a known front~\cite{lu2024nasmoo}. Accuracy and energy do not
-depend on $\tau$ or $\pi$, and latency does not depend on $b$, which keeps
-the enumeration cheap. Width and clock scaling are gridded at 151 and 51
-levels. Each of the $3\times151\times51=23{,}103$ (depth, width,
-clock-scaling) combinations was simulated at the nine time-slice and
-policy pairs of the grid-search lattice, $\tau\in\{5,27.5,50\}$\,ms and
-$\pi\in\{0,1,2\}$. Its best latency was kept and copied to all four
-bit-widths, which covers a 92,412-design grid:
+\input{tables/table_front}
 
-\begin{center}
-\small
-$23{,}103 \times 9 = 207{,}927$ scheduler simulations, $248$\,s total\\
-$26{,}820$ acceptable designs ($29.0\%$ of the grid)\\
-108-design non-dominated front $\mathcal{P}^{\star}$: hypervolume
-$1.68\times10^{-2}$
-\end{center}
+\input{tables/table_sensitivity}
 
-$\mathcal{P}^{\star}$ is exact for this grid and these three time slices,
-not for the continuous space. Every hypervolume is measured from the
-fixed corner $(\mathrm{acc},E)=(0.70,\,100\,\mu\mathrm{J})$, identical
-across methods and seeds, because hypervolumes taken from different
-corners cannot be compared~\cite{guerreiro2022hypervolume}. All but 3 of
-the 26,820 acceptable designs dominate this corner. The three exceptions
-are 32-bit designs just above $100\,\mu$J, far from any front, and they
-add nothing to any hypervolume reported here. The reference hypervolume
-fills $56.1\%$ of the $3.00\times10^{-2}$ box between the corner and the
-ideal point of accuracy 1 at zero energy.
+Sensitivity runs recompute the front under $19$ cases, $12$ of them in
+the table: latency limits of
+$50$, $100$, and $200$\,ms against miss limits of $0$, $1$, and $5\%$, mean in
+place of $95$th-percentile latency, Stop-mode idle current, switch and tick
+costs scaled by $0.5$ and $2$, the int16 and int4 overheads scaled by $0.5$
+and $2$, and two generated task sets at $20$ and $50\%$ periodic utilization
+\cite{kim2021harmonic}. The front has $2$ to $6$ designs in every case, always
+with $L\in\{4,5\}$ and never with $b=32$. Int4 designs enter only when the
+int4 overhead is halved. Tightening the latency limit to $50$\,ms pushes the
+front to $b=8$ alone and shrinks the acceptable set to $125$ to $143$
+designs, and a $200$\,ms limit admits $60$\,MHz designs and up to $812$
+acceptable ones. With Stop-mode idle current, the front moves to
+$180$\,MHz alone, the race-to-idle result. The task set at $50\%$
+utilization leaves $99$ acceptable designs. The coupling between
+scheduler and network therefore shows in which clock and precision survive
+each constraint set, and it is stable in the layer count.
 
-All 108 designs of $\mathcal{P}^{\star}$ use $b{=}4$ and $L{=}4$ and need
-at most $129.2$\,KB. In this space a fourth block buys accuracy for fewer
-MACs than widening a shallower stack does, and 4-bit weights cut energy
-at no modeled accuracy cost, so the front settles at the deepest stack and the
-lowest precision and trades along $w$ and $\delta$ alone:
+\subsection{Method Comparison}
+\label{sec:comparison}
+\input{tables/table_methods}
 
-\begin{center}
-\small
-$w\in[0.25,\,0.785]$, \ $\delta\in[0.5,\,1.0]$\\
-accuracy $75.6\%$ to $87.3\%$ \ at \ $0.76$ to $12.7\,\mu$J
-\end{center}
+At $100$ evaluations, qNEHVI reaches a median of $100\%$ of the reference
+hypervolume at corner A, and $18$ of $20$ seeds end at exactly that value;
+one ends at $91.2\%$ and another at $99.95\%$ (Fig.~\ref{fig:convergence}). qNParEGO reaches
+$99.6\%$ (interquartile range $96.4$ to $100$), MOTPE $91.0\%$, the
+two-stage Sequential search $91.2\%$, Random $74.8\%$, and NSGA-II $56.0\%$.
+Corner B gives the same order, $100$, $99.7$, $70.2$, $70.3$, $58.9$, and
+$28.6\%$. The Friedman test rejects equal methods at both corners ($p=1.2\times10^{-16}$
+and $2.6\times10^{-15}$). qNEHVI is also the fastest to $90\%$, at a median of $28$ evaluations
+against $40$ for qNParEGO, $54$ for MOTPE, and $65$ for Sequential; Random and
+NSGA-II reach it in only one seed of $20$. Against Random, NSGA-II, MOTPE,
+and Sequential, the Holm-corrected one-sided $p$-values lie between
+$4.8\times10^{-6}$ and $1.2\times10^{-4}$, where the smallest value $20$ pairs can reach is
+$9.5\times10^{-7}$, and Cliff's $\delta$ is $0.96$ to $0.99$. Against
+qNParEGO, $p=1.8\times10^{-3}$ and $\delta=0.75$ at corner A, with a median
+difference of $0.2$ points: the two joint Bayesian methods are close, and the
+gap, although consistent, is small.
 
-Those two variables are coupled through the latency limit, which is
-exactly the interaction a joint formulation exists to capture. Along the
-lower-accuracy part of $\mathcal{P}^{\star}$ the clock stays at its floor
-and only the width grows, until latency at half speed reaches
-$100$\,ms. Past that point every further gain in accuracy needs a faster
-clock, and the rest of the front runs along the latency limit itself:
-
-\begin{center}
-\small
-61 designs at $\delta{=}0.5$: $w$ from $0.25$ to $0.55$, accuracy up to
-$83.6\%$\\
-47 designs at $\delta{>}0.5$: $w$ from $0.555$ to $0.785$, latency
-$97.7$ to $100.0$\,ms
-\end{center}
-
-A search with the clock pinned at either end would lose half of this
-front. At $\delta{=}1.0$ the cheapest acceptable design costs
-$1.52\,\mu$J, twice the optimum, and at $\delta{=}0.5$ no acceptable
-design exceeds $83.6\%$ accuracy.
-
-\begin{table}[t]
+\begin{figure}[t]
 \centering
-\caption{Single-Objective Results (Eq.~\ref{eq:soo})}
-\label{tab:soo}
-\begin{tabular}{|l|c|c|c|}
-\hline
-\rowcolor{tblhead}
-\textbf{Method} & \textbf{Evals.} & \textbf{Energy ($\mu$J)} & \textbf{Acceptable} \\
-\hline
-BO     & 30  & 0.76 & 18/30 \\
-\hline
-Grid   & 972 & 0.76 & 264/972 \\
-\hline
-Random & 30  & 3.80 & 6/30 \\
-\hline
-\end{tabular}
+\includegraphics[width=\columnwidth]{fig_convergence.pdf}
+\caption{Hypervolume as a percentage of the reference front against
+evaluations, median over $20$ seeds with the interquartile range shaded.
+The dotted line marks $90\%$.}
+\label{fig:convergence}
+\end{figure}
 
-\vspace{2pt}
-{\footnotesize Design found by both BO and Grid: $L{=}4,\,w{\approx}0.250,
-\,b{=}4,\,\delta{=}0.5$; 75.6\% accuracy, 18.8\,ms latency, 16.7\,KB
-memory.}
-\end{table}
+The share of evaluations that were not acceptable is $56\%$ for qNEHVI,
+$58\%$ for MOTPE, $57\%$ for Sequential, $66\%$ for qNParEGO, $79\%$ for
+NSGA-II, and $97\%$ for Random. With $378$ acceptable designs among
+$12{,}000$ and a front of four, the space is small for a model-based search, and the margin over
+Random is a statement about this problem; a larger space or a longer front
+could change it. NSGA-II ran with pymoo defaults and a population of $10$,
+and on some seeds it collapses to one architecture; its rank reflects that
+configuration and was not tuned.
 
-BO matches the grid optimum with $32\times$ fewer evaluations; in the
-reported run it first reaches that design at its 16th evaluation. On
-solution quality the two tie. The whole gain lies in search cost. That
-gain matters most once an evaluation stops being a closed-form model and
-becomes a device measurement. Against the simulator used here, a
-972-point sweep takes seconds. On hardware, each of those 972 points would
-carry a retraining or profiling cost, and a 30-evaluation search pays
-that cost only 30 times. Over 30 seeds BO finds the same optimum every
-time, while random search averages $3.50\,\mu$J and never gets below
-$1.06\,\mu$J. The signed-rank test~\cite{wilcoxon1945individual} returns
-the smallest $p$-value possible for 30 paired seeds. In the reported
-run, once its Gaussian process takes over, BO also stays inside the
-acceptable region: 15 of its last 18 evaluations are acceptable, against
-1 of 18 for random search.
+Proposal time separates the methods in wall-clock terms. The median total
+time spent proposing designs over $100$ evaluations is $23$ minutes for
+qNEHVI, $33$ for qNParEGO, and $58$ for Sequential, which is $14$, $20$, and $35$
+seconds per evaluation, on a fanless laptop. NSGA-II, MOTPE, and Random need
+under one second per run. One evaluation of a design costs milliseconds, so
+in this problem the Bayesian methods are slower overall; they pay off only
+where an evaluation costs more than their proposal time, as a training run
+or a board measurement would. In evaluations, qNEHVI reaches $90\%$ after
+$28$, which is $0.23\%$ of the grid, and ends at $100$ evaluations, which is
+$0.83\%$.
 
-Front quality is summarized by two standard
-indicators~\cite{zitzler2003performance}. Hypervolume (HV) is the area of
-objective space a front dominates up to the fixed corner, and larger is
-better. Inverted generational distance (IGD)~\cite{coello2005igd} is the
-mean distance from each point of $\mathcal{P}^{\star}$ to its nearest
-neighbor in the compared front, with both objectives min--max normalized
-over $\mathcal{P}^{\star}$, and smaller is better.
-
-\begin{table}[t]
+\begin{figure}[t]
 \centering
-\caption{Multi-Objective Results (Eq.~\ref{eq:moo}, 100 evaluations)}
-\label{tab:moo}
-\begin{tabular}{|l|c|c|c|c|}
-\hline
-\rowcolor{tblhead}
-\textbf{Method} & \textbf{HV} & \textbf{\%$\mathcal{P}^{\star}$} & \textbf{IGD} & \textbf{Size} \\
-\hline
-BO                    & $1.66\times10^{-2}$ & 98.4  & $6.61\times10^{-2}$ & 10  \\
-\hline
-Random                & $1.50\times10^{-2}$ & 89.1  & $1.26\times10^{-1}$ & 6   \\
-\hline
-$\mathcal{P}^{\star}$ & $1.68\times10^{-2}$ & 100.0 & 0                    & 108 \\
-\hline
-\end{tabular}
-\end{table}
+\includegraphics[width=\columnwidth]{fig_front.pdf}
+\caption{The reference front and the front found by the median seed of each
+method. Markers are offset sideways by a few $\mu$J so that coincident
+designs stay visible.}
+\label{fig:front}
+\end{figure}
 
-BO returns a 10-design front holding $98.4\%$ of the hypervolume of
-$\mathcal{P}^{\star}$, and random search a 6-design front at $89.1\%$. In
-the 15-seed sweep, with 20 evaluations per run, BO averages $94.5\%$ of
-the reference hypervolume and random search $70.0\%$. Cliff's
-$\delta=1.0$~\cite{cliff1993dominance} is the largest value this
-nonparametric effect size can take, and it means BO's hypervolume beat
-random search's on every paired seed. The bootstrap $95\%$ confidence
-interval on the difference is $[3.1\times10^{-3},\,5.2\times10^{-3}]$,
-and the signed-rank test is again at its floor. Mean IGD over the sweep
-is $0.185$ for BO against $0.535$ for random search, so the BO fronts also
-lie closer to $\mathcal{P}^{\star}$ point by point.
+\subsection{Joint Against Sequential Search}
+\label{sec:sequential}
+Sequential stalls at $91.2\%$ at corner A and $70.3\%$ at corner B in all $20$
+seeds, so its interquartile range is zero. The cap is structural: its first stage fixes
+$180$\,MHz, a $10$\,ms slice, and equal priority, and three of the four
+front designs run at $120$\,MHz. No second-stage search can reach them,
+because the network was chosen under the wrong clock. Joint qNEHVI exceeds
+it by $8.8$ points at the median ($p=9.8\times10^{-5}$, $\delta=0.96$). The
+size of the cap depends on the values stage one fixes, and a different fixed
+clock would move it; the result shows that fixing the scheduler first can
+exclude the best designs, and not by how much in general.
 
-How the two methods spend their evaluations explains much of the gap.
-BO already holds $97.6\%$ of the reference hypervolume by its 30th
-evaluation, and every design on its final front uses $L{=}4$ and $b{=}4$,
-matching $\mathcal{P}^{\star}$. Random search's front still carries an
-8-bit and a 32-bit design. The rejected evaluations differ as well. Of
-BO's 100, 57 overshoot the latency limit and only 7 miss the accuracy
-floor; for random search the counts are 21 and 51. BO keeps probing the
-latency boundary, which is where the upper half of $\mathcal{P}^{\star}$
-lies, while random search spends half its evaluations on networks too
-small to be useful.
+\subsection{Hardware Validation and Test Accuracy}
+\label{sec:hardware}
+\input{tables/table_hardware}
 
-\begin{table}[t]
+\begin{figure}[t]
 \centering
-\caption{Repeated-Seed Statistics}
-\label{tab:seedstats}
-\footnotesize
-\setlength{\tabcolsep}{3pt}
-\begin{tabular}{|l|l|c|c|c|c|}
-\hline
-\rowcolor{tblhead}
-\textbf{Sweep} & \textbf{Method} & \textbf{Mean} & \textbf{Std} & $\boldsymbol{\delta}$ & \textbf{$p$} \\
-\hline
-\multirow{2}{*}{SOO} & BO     & 0.76\,$\mu$J & 0
-  & \multirow{2}{*}{1.0} & \multirow{2}{*}{$9.3{\times}10^{-10}$} \\
-\cline{2-4}
-                     & Random & 3.50\,$\mu$J & 2.47\,$\mu$J & & \\
-\hline
-\multirow{2}{*}{MOO} & BO     & $1.59{\times}10^{-2}$ HV & $3.5{\times}10^{-4}$
-  & \multirow{2}{*}{1.0} & \multirow{2}{*}{$3.1{\times}10^{-5}$} \\
-\cline{2-4}
-                     & Random & $1.18{\times}10^{-2}$ HV & $2.2{\times}10^{-3}$ & & \\
-\hline
-\end{tabular}
+\includegraphics[width=\columnwidth]{fig_cycles.pdf}
+\caption{Predicted against measured inference cycles on the STM32F469I-DISCO
+at $180$\,MHz, for the $24$ calibration benchmarks and the eight held-out
+models.}
+\label{fig:cycles}
+\end{figure}
 
-\vspace{2pt}
-{\footnotesize SOO (single-objective): 30 seeds $\times$ 30 trials.
-MOO (multi-objective): 15 seeds $\times$ 20 trials. $p$: one-sided exact
-signed-rank test.}
-\end{table}
+Eight int8 networks that were not used in calibration ($L=2$ to $5$ at
+$w=0.4375$ and $0.8125$) were benchmarked on the same board. Their cycles are
+predicted with a mean absolute error of $4.8\%$ and at most $7.6\%$, against
+$2.4\%$ and $4.7\%$ on the $24$ calibration benchmarks. The error has a sign:
+$7$ of $8$ predictions are low, with a mean of $-4.5\%$ (the calibration set
+has $-0.1\%$), so predicted cycles run a few percent below the board. Flash
+errs by $1.6\%$ on average and $6.3\%$ at most, and RAM by $6.6\%$ and $8.6\%$.
+The four front designs were also evaluated once on the CIFAR-10 test split
+of $10{,}000$ images. Test accuracy differs from the table's validation
+accuracy by $+0.63$, $-0.17$, $-0.86$, and $-1.08$ points, a mean of $-0.37$. A negative mean is expected when the checkpoint is chosen
+on validation accuracy. For comparison, the seed standard deviation is between
+$0.44$ and $0.47$ points at $8$, $16$, and $32$ bits.
+The int16 and int4 cycle ratios, and the memory of every int16 and int4
+design, were not run on silicon, which includes the one front design at
+$b=16$.
 
-Early in a run the picture is different. At 5 evaluations random search
-is marginally ahead ($7.0\times10^{-3}$ against $6.9\times10^{-3}$ HV),
-which is expected, since BO's first 12 trials are Sobol points chosen
-without any model. Through that phase the two methods stay within each
-other's seed-to-seed spread. The gap opens once the Gaussian process has
-data to work from: by trial 15, BO averages $1.43\times10^{-2}$ against
-$1.02\times10^{-2}$ for random search. What the model contributes shows
-only after that point.
-
-Neither result says BO finds a better design than enumeration does. It
-finds designs of the same quality, or close to it, at a small fraction of
-the evaluation cost, and consistently enough across seeds to rule out
-chance. Several limitations qualify these results.
-
-\begin{itemize}
-\item \emph{Threshold ambiguity.} Ten of the 108 reference-front designs
-sit within the $2.40$\,pp error band of the $0.75$ floor, so whether they
-truly qualify is open. Every method is scored against the same
-$\mathcal{P}^{\star}$, so dropping all ten would lower the ceiling for BO
-and random search alike; the ranking would hold, and only the reported
-percentages would change.
-\item \emph{Energy model.} Eq.~\eqref{eq:energy} counts arithmetic only
-and omits data-movement energy, which often dominates on real
-hardware~\cite{sze2017efficient}. The absolute energies are therefore
-lower bounds, and the optimum could move once memory traffic is charged.
-\item \emph{Front size.} The count of 108 is set by the enumeration grid,
-and a finer grid in $w$ and $\delta$ would give more points.
-Hypervolume, not front size, is the quantity to compare.
-\item \emph{Scope.} Every number comes from a simulated core, with
-accuracy selected on the test set, for one network family on one
-dataset. A different stack or task would need a new accuracy surface and
-a new reference front.
-\end{itemize}
-
-The numbers are tied to this deployment, while the search formulation
-carries over to others.
+\subsection{Limitations}
+\label{sec:limitations}
+Energy comes from datasheet currents and was not measured, and the run
+currents are typical values for benchmark code. Cycles and memory were
+measured on an F469 board and applied to an F446 target of the same core family.
+Table accuracy is one training seed per architecture, with a seed noise of
+$0.44$ to $1.26$ points that is larger at int4. The workload is a
+synthetic task set with an assumed tick cost, and the front lies on a grid
+of $12{,}000$ designs that holds ten values of $\tau$, whereas the searches
+treat it as continuous. The two Ax methods receive corner A as objective thresholds and the other
+methods use no reference point, which may favor the Ax methods; corner B
+gives the same order but uses the same thresholds. Twenty seeds bound each
+$p$-value from below at about $10^{-6}$.

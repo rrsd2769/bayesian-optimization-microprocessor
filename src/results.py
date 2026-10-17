@@ -46,6 +46,7 @@ REGISTRY = {a.name: a for a in [
     Artifact("validation_model", "exports/validation/{arch}_{prec}.onnx", "file", "export-validate"),
     Artifact("cloud_validation", "cloud_validation.csv", "csv", "import-cloud"),
     Artifact("hw_validation", "hw_validation.json", "json", "validate-hw"),
+    Artifact("paper_numbers", "paper_numbers.json", "json", "paper-numbers"),
     Artifact("test_accuracy", "test_accuracy.json", "json", "test-accuracy"),
     # Phase 4
     Artifact("qat_pilot_run", "qat_pilot/{arch}.json", "json", "qat-pilot"),

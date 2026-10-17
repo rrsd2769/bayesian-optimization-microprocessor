@@ -1,0 +1,37 @@
+\begin{table}[t]
+\centering
+\caption{Reference Front Under Changed Scenarios}
+\label{tab:sensitivity}
+\footnotesize
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{|l|c|c|c|c|l|}
+\hline
+\rowcolor{tblhead}
+\textbf{Case} & \textbf{Acceptable} & \textbf{Front} & \textbf{$b$} & \textbf{$L$} & \textbf{$f$ (MHz)} \\
+\hline
+Nominal & 378 & 4 & 16, 8 & 4, 5 & 120, 180 \\
+\hline
+Latency 50 ms & 143 & 2 & 8 & 4, 5 & 150 \\
+\hline
+Latency 200 ms & 731 & 5 & 16, 8 & 4, 5 & 60, 120, 150 \\
+\hline
+Miss limit 0\% & 333 & 4 & 16, 8 & 4, 5 & 120, 180 \\
+\hline
+Miss limit 5\% & 387 & 4 & 16, 8 & 4, 5 & 120, 180 \\
+\hline
+Mean latency & 663 & 5 & 16, 8 & 4, 5 & 120, 150 \\
+\hline
+Stop-mode idle & 378 & 4 & 16, 8 & 4, 5 & 180 \\
+\hline
+Switch and tick $\times0.5$ & 390 & 4 & 16, 8 & 4, 5 & 120, 180 \\
+\hline
+Switch and tick $\times2$ & 378 & 4 & 16, 8 & 4, 5 & 120, 180 \\
+\hline
+Int4 overhead $\times0.5$ & 391 & 5 & 16, 4, 8 & 4, 5 & 120, 180 \\
+\hline
+Task set, 20\% load & 299 & 3 & 16, 8 & 4, 5 & 120, 150 \\
+\hline
+Task set, 50\% load & 99 & 2 & 8 & 4, 5 & 180 \\
+\hline
+\end{tabular}}
+\end{table}

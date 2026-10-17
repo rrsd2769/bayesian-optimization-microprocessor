@@ -1,349 +1,219 @@
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.96\textwidth]{fig_architecture.pdf}
+\caption{Evaluation of one design: the layer profile feeds the accuracy,
+memory, and cycle models, the workload simulator turns cycles and the
+scheduler variables into latency and deadline misses, and the energy model
+and constraint check produce the two objectives.}
+\label{fig:architecture}
+\end{figure*}
+
+One design is evaluated by the pipeline of Fig.~\ref{fig:architecture}. The
+network's layer profile, its MACs, weights, and output volumes, feeds
+three models: a measured accuracy table, a memory model, and a cycle model.
+The cycle model and the scheduler variables enter a workload simulator that
+returns latency and deadline misses, and the energy model turns the
+simulated activity into energy per inference. A constraint check then
+decides whether the design is acceptable.
+
 %=============================================================
 % METHODOLOGY
 %=============================================================
 
-Energy per inference depends on the network and the scheduler together.
-The network fixes the arithmetic workload, and the scheduler fixes how
-quickly and at what power that workload runs. Quantizing weights to fewer
-bits changes the cost of every operation a request performs. Slowing the
-clock lowers instantaneous power but stretches execution time, which eats
-into the latency limit the network must still meet. Tuning one half with
-the other held fixed therefore discards part of the design before the
-search starts. Both halves are instead posed as a single six-dimensional
-problem and searched with Bayesian optimization, with the number of
-evaluations kept small enough that the same loop could later run against
-measurements taken on a device. A candidate design is
+\subsection{Design Space}
+\label{sec:space}
+The network is a CIFAR-10 classifier of $L$ blocks, each a $3{\times}3$
+convolution, batch normalization, ReLU, and $2{\times}2$ max pooling. The
+blocks have $32$, $64$, $128$, $256$, and $256$ channels, each multiplied by
+a width $w$, and are followed by global average pooling, a $128$-unit hidden
+layer, and the ten-way classifier. Weight precision $b$ takes four values.
+The scheduler parameters are the time slice $\tau$ of round-robin among
+tasks of equal priority, the priority $\pi$ of the inference task relative to
+the two periodic tasks, and the core clock $f$, restricted to rows of the
+STM32F446RE datasheet (DS10693). One design is
+$\mathbf{x}=(L,w,b,\tau,\pi,f)$. The ranges are in Table~\ref{tab:space};
+$\tau$ is rounded up to whole $1$\,ms ticks.
+
+\input{tables/table_space}
+
+\subsection{Workload and Energy}
+\label{sec:workload}
+Inference shares one core with two periodic tasks under fixed-priority
+preemptive scheduling and a $1$\,kHz tick, the policy of
+FreeRTOS~\cite{oliveira2023freertos}. A sensor task runs every $10$\,ms for
+$90{,}000$ cycles at priority $3$, and a communication task every $50$\,ms for
+$360{,}000$ cycles at priority $2$. The periods are harmonic~\cite{pavic2020periods},
+the deadlines equal the periods, and the two cycle counts are a chosen
+nominal case. Fifty inference requests arrive as a Poisson
+process~\cite{he2020poisson} with a mean gap of $200$\,ms, each with $\pm5\%$
+jitter on its cycle count. A single task serves them in arrival order, and the
+priority levels \emph{below}, \emph{equal}, and \emph{above} are $1$, $2$,
+and $4$. The simulator is event-driven and deterministic: every design
+replays the same arrivals; designs differ only in cycles, clock, slice, and
+priority.
+
+A context switch costs $390$ cycles. That value derives from timings
+measured for FreeRTOS on a Cortex-M4 (STM32F407)~\cite{ungurean2020rtos}: the
+$4.13~\mu$s event-triggered switch minus the $1.82~\mu$s signalling call. It is an
+upper bound, because the difference still contains the return from the
+blocking call. No published value exists for the tick interrupt; its
+$100$ cycles are an assumption. Sensitivity runs scale both costs by $0.5$
+and $2$ and replace the task set (Section~\ref{sec:sensitivity}).
+
+Energy per inference follows from datasheet currents,
 \begin{equation}
-\label{eq:designvec}
-\mathbf{x} = (L,\,w,\,b,\,\tau,\,\pi,\,\delta) \in \mathcal{X},
-\end{equation}
-with three network variables $(L,w,b)$ and three scheduler variables
-$(\tau,\pi,\delta)$, whose types and ranges are listed in
-Table~\ref{tab:space}. $L$ sets the number of convolutional blocks, $w$
-scales the channel count of every block by one common multiplier, and $b$
-sets the bits each stored weight occupies. On the runtime side, $\tau$ is
-how long a task may hold the processor before preemption, $\pi$ selects
-the scheduling policy, and $\delta$ scales the core clock relative to full
-speed. With three of the six ($w,\tau,\delta$) continuous, $\mathcal{X}$
-cannot be searched by trying every value. The other three are discrete,
-which makes $\mathcal{X}$ a mixed space and rules out gradient-based
-search of the whole problem even if a differentiable form of
-$E(\mathbf{x})$ existed.
-
-\begin{table}[t]
-\centering
-\caption{Design Variables and Search Ranges}
-\label{tab:space}
-\begin{tabular}{|l|l|l|l|}
-\hline
-\rowcolor{tblhead}
-\textbf{Symbol} & \textbf{Controls} & \textbf{Type} & \textbf{Range} \\
-\hline
-$L$      & depth (conv.\ blocks)   & choice     & $\{2,3,4\}$ \\
-\hline
-$w$      & width multiplier        & continuous & $[0.25,\,1.0]$ \\
-\hline
-$b$      & bits per weight         & choice     & $\{4,8,16,32\}$ \\
-\hline
-$\tau$   & time slice (ms)         & continuous & $[5.0,\,50.0]$ \\
-\hline
-$\pi$    & scheduling policy       & choice     & $\{0,1,2\}$ \\
-\hline
-$\delta$ & clock-scaling factor    & continuous & $[0.5,\,1.0]$ \\
-\hline
-\end{tabular}
-\end{table}
-
-\begin{figure*}[t]
-\centering
-\includegraphics[width=\textwidth]{figures/fig_architecture}
-\caption{System architecture. A design vector splits into network and
-runtime parameters. The network builder derives the weight count $P$ and
-the multiply--accumulate count $F$, and the runtime parameters define the
-request stream and the core clock for the queueing simulation. Four
-evaluation models turn these into accuracy, memory, energy, and latency;
-the acceptability test screens the result before the active objective
-scores it. Every stage is deterministic and runs forward only: no
-quantity on the right feeds anything to its left.}
-\label{fig:architecture}
-\end{figure*}
-
-Table~\ref{tab:arch} gives the convolutional stack, the classification
-head, and the training recipe behind every accuracy measurement. Each
-network is trained on CIFAR-10 with the Adam optimizer. The recipe
-never changes with $(L,w)$, which leaves the architecture as the only
-source of accuracy differences. The channel floor
-$\max(4,\lfloor c_i w\rfloor)$ stops the narrowest designs from
-collapsing to zero channels. Because each block halves the spatial
-resolution, an $L$-block stack passes a $32/2^{L}$-pixel map to the global average
-pool at any width, and a single classifier head serves every depth. The
-parameter count runs from $4{,}882$ to $423{,}082$, a factor of about
-$87$. How much of it the head holds swings sharply with $(L,w)$: about
-$71\%$ of the weights in the smallest design, under $9\%$ in the largest.
-That matters for quantization below, because only the head is quantized
-dynamically. Training images receive random $32{\times}32$ crops from
-four-pixel zero padding and random horizontal flips; all images are
-normalized per channel, and weight decay of $10^{-4}$ applies throughout.
-No separate validation split was held out. The epoch with the highest
-test accuracy is kept, which makes every measured accuracy slightly
-optimistic.
-
-\begin{table}[t]
-\centering
-\caption{Network Architecture and Training Recipe}
-\label{tab:arch}
-\begin{tabular}{|p{0.19\linewidth}|p{0.70\linewidth}|}
-\hline
-\rowcolor{tblhead}
-\textbf{Stage} & \textbf{Specification} \\
-\hline
-Block $i{=}1..L$ & Conv\,$3{\times}3$ (pad 1, no bias) $\to$ BatchNorm
-$\to$ ReLU $\to$ MaxPool\,$2{\times}2$; channels
-$\max(4,\lfloor c_i w\rfloor)$ \\
-\hline
-Base widths & $(c_1,c_2,c_3,c_4) = (32,64,128,256)$ \\
-\hline
-Head & GlobalAvgPool $\to$ Flatten $\to$ Linear$(C_L,128)$ $\to$ ReLU
-$\to$ Dropout$(0.3)$ $\to$ Linear$(128,10)$ \\
-\hline
-Parameters & $4{,}882$ to $423{,}082$ over $(L,w)$ \\
-\hline
-Training & CIFAR-10, 50 epochs, Adam (lr $10^{-3}$), batch 128,
-cosine-annealing schedule \\
-\hline
-\end{tabular}
-\end{table}
-
-A design is \emph{acceptable} if it clears an accuracy floor and a latency
-limit at once,
-\begin{equation}
-\label{eq:feasible}
-\mathcal{F} = \{\mathbf{x}\in\mathcal{X} : \mathrm{acc}(\mathbf{x}) \geq 0.75,\ \ \ell(\mathbf{x}) \leq 100\ \mathrm{ms}\}.
-\end{equation}
-Both are hard constraints and neither is folded into the objective, since
-energy is worth minimizing only once a design is usable. The $100$\,ms
-limit is a design choice and not a physical constant, and its effect on
-the design space was checked directly. Below are the acceptable share of the
-space and the hypervolume of the enumerated reference front, defined with
-the results, at three limits:
-
-\begin{center}
-\small
-$50$\,ms $\to$ $13.2\%$ acceptable, reference HV $1.41\times10^{-2}$\\
-$100$\,ms $\to$ $29.0\%$ acceptable, reference HV $1.68\times10^{-2}$\\
-$200$\,ms $\to$ $41.5\%$ acceptable, reference HV $1.87\times10^{-2}$
-\end{center}
-
-Both quantities move smoothly as the limit is relaxed or tightened, with
-no threshold effect near $100$\,ms. The comparison between search methods
-was run at $100$\,ms only.
-
-Memory is reported for every design but never constrained, which is a
-simplification. The largest design ($L{=}4$, $w{=}1.0$, $b{=}32$) needs
-$1{,}652.7$\,KB, well above the 512\,KB of on-chip memory assumed for
-this device class, and $1{,}414$ of the $26{,}820$ acceptable designs ($5.3\%$) also
-exceed 512\,KB, all of them at 16 or 32 bits. Leaving memory out is
-justified by where the reference front lies. Every member of that front
-uses 4-bit weights and needs at most $129.2$\,KB. A hard memory limit
-would remove only designs already dominated on accuracy and energy, and
-the set of designs worth reporting would stay the same. The argument
-holds for this device class. On a part with a smaller store, a memory
-limit would cut into the front itself and would have to become a
-constraint.
-
-Eq.~\eqref{eq:soo} minimizes energy subject to \eqref{eq:feasible}, and
-Eq.~\eqref{eq:moo}, the main contribution, searches the accuracy--energy
-trade-off directly:
-\begin{align}
-\min_{\mathbf{x}\in\mathcal{X}} \quad & E(\mathbf{x})
-&& \text{s.t.}\ \ \eqref{eq:feasible}, \label{eq:soo}\\
-\max_{\mathbf{x}\in\mathcal{X}} \quad & \bigl(\mathrm{acc}(\mathbf{x}),\, -E(\mathbf{x})\bigr)
-&& \text{s.t.}\ \ \ell(\mathbf{x})\leq100\ \mathrm{ms}. \label{eq:moo}
-\end{align}
-
-Accuracy is read from a regression surface instead of being measured
-anew for each candidate, much as regression models stand in for
-on-device profiling of energy and latency~\cite{mazumder2024regtune}.
-Training one network per proposed design would dominate the cost of the
-search; the surface is instead fitted once and reused for every query. Six
-architectures were trained, namely the four corners of the $(L,w)$
-range, its center, and the $(3,\,1.0)$ baseline, and each was evaluated
-at all four bit-widths ($6\times4=24$ measurements). Ordinary least
-squares on the six per-architecture means gives
-\begin{equation}
-\label{eq:scalinglaw}
-\widehat{\mathrm{acc}}(L,w) = a + b_1\ln L + c_1\ln w,
-\end{equation}
-with $a{=}0.445$, $b_1{=}0.326$, and $c_1{=}0.102$. In-sample, the fit
-explains $98.6\%$ of the variance ($R^2{=}0.986$). That number says little
-on its own, because three parameters fitted to six points will nearly
-always score well. Leave-one-out cross-validation was run as well:
-each point is held out in turn, the surface is refitted on the other
-five, and the held-out point is predicted. The root-mean-square held-out
-error is $2.40$\,pp and the worst case $3.82$\,pp, and $2.40$\,pp is the
-error bar attached to every accuracy figure below. A power-law surface
-tested the same way was rejected, with a held-out error four times
-larger. The logarithmic form follows the diminishing returns in the
-measurements (doubling depth or width does not double accuracy) using two
-slope coefficients and no higher-order terms. Both slopes came out
-positive. The surface therefore rises monotonically in depth and width and has
-no spurious local peak for the acquisition function to chase.
-Predictions are clipped to $[0.40,0.95]$, and Eq.~\eqref{eq:scalinglaw}
-is used only inside the ranges of Table~\ref{tab:space}. Bit-width moved
-measured accuracy by at most $0.30$\,pp, an order of magnitude below the
-held-out error. For that reason $b$ is left out of
-Eq.~\eqref{eq:scalinglaw}, and accuracy is treated as independent of
-bit-width.
-
-Quantization is applied after training~\cite{rokh2023quantization},
-and the surface of Eq.~\eqref{eq:scalinglaw} needs no retraining at any
-bit-width. Table~\ref{tab:quant} lists what each bit-width does. Nothing
-in the executed network runs at 4-bit precision; $b{=}4$ is a projected
-memory point, not a measured one. The scheme is mild. At 8 and 4 bits
-only the Linear layers of the head are quantized, and the convolutional
-weights, between about $29\%$ and $92\%$ of all parameters depending on
-$(L,w)$, stay at full precision; only at 16 bits is every weight rounded.
-The bit-width neutrality found above for accuracy is a property of this
-restricted scheme and not of quantization in general.
-
-\begin{table}[t]
-\centering
-\caption{Quantization Behavior by Bit-Width}
-\label{tab:quant}
-\begin{tabular}{|c|p{0.62\linewidth}|}
-\hline
-\rowcolor{tblhead}
-\textbf{$b$} & \textbf{Effect} \\
-\hline
-32 & weights unmodified (full-precision baseline) \\
-\hline
-16 & all weights rounded to half precision \\
-\hline
-8  & dynamic 8-bit quantization of the Linear layers \\
-\hline
-4  & reuses the 8-bit path with size halved; no 4-bit kernel exists on
-the target device, so none executes \\
-\hline
-\end{tabular}
-\end{table}
-
-Memory is the nominal storage of the weights at the target width,
-\begin{equation}
-\label{eq:memory}
-\mathrm{mem}(\mathbf{x}) = P(L,w)\cdot b/8\ \ \text{bytes},
-\end{equation}
-computed analytically from the parameter count $P(L,w)$, because
-dynamically quantized layers no longer expose their weights as
-parameters. Measuring the quantized object directly would miss the
-classifier head and, on the narrowest designs, report less than a third
-of the true footprint. Eq.~\eqref{eq:memory} is still idealized: it
-charges every weight at the nominal width and ignores packing overhead
-and quantization metadata. The idealization is the same everywhere in
-the space, though, and memory enters neither the objectives nor the
-acceptability test. It changes the reported footprint and never the
-search.
-
-Energy per inference follows the standard CMOS switching
-model~\cite{chandrakasan1992lowpower} for a workload of $F(L,w)$ MACs,
-\begin{equation}
+E=\frac{V_{DD}\left(I_{\mathrm{run}}(f)\,t_{\mathrm{act}}+I_{\mathrm{sleep}}(f)\,t_{\mathrm{idle}}\right)}{N},
 \label{eq:energy}
-E(\mathbf{x}) = F(L,w)\cdot V^2 C \cdot \delta \cdot b/32,
 \end{equation}
-with an assumed supply voltage $V{=}3.3$\,V, the nominal supply of common
-Cortex-M4 boards, and an assumed effective switched capacitance
-$C{=}1{\times}10^{-12}$\,F per operation. More arithmetic costs
-proportionally more energy. The $V^2C$ term is the physics: each
-switching event charges a small capacitance through the supply, at an
-energy cost that grows with the square of the voltage. The $b/32$ factor
-scales energy with bit-width the same way it scales memory, on the
-reasoning that a narrower multiplier is physically smaller and switches
-less silicon per operation; at $b{=}32$ the factor is $1$ and gives no
-discount.
+with $V_{DD}=3.3$\,V and $N=50$ requests, over a horizon that ends when the
+last request completes. The active time $t_{\mathrm{act}}$ covers
+inference, both periodic tasks, context switches, and ticks. Run currents are
+$10$, $18$, $32$, $41$, and $46$\,mA, and Sleep currents $4.43$ to
+$11.36$\,mA, at $30$, $60$, $120$, $150$, and $180$\,MHz. Equation~(\ref{eq:energy}) reflects
+how energy is the product of power and time~\cite{wu2021energy}, and
+discrete operating points are the usual form of frequency scaling on such
+parts~\cite{zidar2024energy}. The tabulated currents are typical values at
+integer-mA resolution, measured with CoreMark-like code and not with network
+kernels. Energy is therefore a model and was not measured on any board.
 
-The dependence on $\delta$ needs its own justification, because the
-textbook derivation does not supply one. With dynamic power written as
-$P=\alpha_{\text{sw}} C V^2 f$ and execution time for a fixed workload as
-$t=F/f$, the energy is $E=Pt=\alpha_{\text{sw}} C V^2 F$. The frequency
-cancels. At a fixed voltage, clock speed would then have no effect on
-energy per inference, and no $\delta$ term could be justified at all. The clock-scaling factor enters instead through the speed--power
-model used in energy-aware scheduling~\cite{bambagini2016energy},
+\subsection{Cycle and Memory Models Calibrated on Silicon}
+\label{sec:calibration}
+Cycles, flash, and RAM were measured through the STM32Cube.AI Developer
+Cloud (ST Edge AI Core 4.0.1, target stm32f4, balanced optimization), which
+benchmarks on real boards~\cite{berta2024cloud}. The farm lists no F446
+board; the benchmarks therefore ran on an STM32F469I-DISCO at $180$\,MHz, the same
+Cortex-M4F family with $2$\,MB of flash. Twelve architectures
+($L=2$ to $5$, $w=0.25$, $0.625$, $1.0$) were exported in fp32 and int8, giving
+$24$ benchmarks. Inference cycles are
 \begin{equation}
-\label{eq:speedpower}
-P(s) = \beta s^{\alpha}, \qquad 2 \leq \alpha \leq 3,
+C=c_{\mathrm{mac}}\,M+c_{\mathrm{first}}\,M_1+c_{\mathrm{w}}\,B_w+c_0,
+\label{eq:cycles}
 \end{equation}
-where $s$ is clock speed normalized to its maximum and the exponent
-absorbs the supply-voltage reduction that accompanies a slower clock.
-For fixed work, execution time scales as $t\propto1/s$, so energy per
-operation scales as $E\propto s^{\alpha-1}$. The value $\alpha{=}2$ is
-used throughout, the conservative end of the range, and it turns into
-exactly the linear $\delta$ term of Eq.~\eqref{eq:energy}, with $V$ kept
-at its nominal value because the voltage effect is already inside
-$\delta$. At $\alpha{=}3$, running at $\delta{=}0.5$ would cut energy to a
-quarter and not a half. The savings available from clock scaling are
-thus understated here by construction.
+with $M$ the MACs, $M_1$ those of the first convolution, $B_w$ the weight
+bytes, and $c_0$ a fixed cost, fitted by non-negative least squares on
+relative error separately for each precision. The int8 fit gives
+$c_{\mathrm{mac}}=1.99$ cycles per MAC, $R^2=0.997$, and a leave-one-out
+error of $3.3\%$ on average and $6.8\%$ at most; the fp32 fit gives
+$c_{\mathrm{mac}}=6.56$, $R^2=0.997$, and $2.9\%$ and $5.9\%$. Cost per MAC
+falls from $4.4$ cycles for the smallest int8 model to $2.2$ for the largest,
+which the fixed and weight-proportional terms account for. Flash is $\sum$ weights${}\cdot b/8$
+plus four bytes per bias plus a fitted kernel term, which matched the Cloud
+report exactly for the weights. SRAM is a fitted activation buffer, a kernel
+term, and a $32$\,KB reserve for the RTOS. The Cloud does not expose how it
+plans the activation buffer, so that term is a regression on the summed
+convolution output volume and the layer count. Leave-one-out error of the
+int8 kernel flash and activation terms reaches $25\%$ and $23\%$, at most
+about $8$\,KB in absolute terms; a design near the $128$\,KB limit carries
+that uncertainty.
 
-Latency depends on contention between requests and not only on the raw
-operation count. It comes from a discrete-event simulation for that
-reason, not from a closed-form expression. With one core and randomly timed arrivals,
-requests queue behind each other, and latency is the computation time
-plus the waiting time; only a simulation captures the second part. The
-simulator models a single-core ARM Cortex-M4 at
-$120\,\mathrm{MHz}\cdot\delta$ that retires one MAC per clock cycle and
-serves 50 inference requests. Arrivals are Poisson with a mean interval of
-$0.2$\,s, and each request's operation count is jittered by $\pm5\%$ so
-that no two requests are identical. Mean latency over the 50 requests is
-reported. The request count is deliberately small, since the simulator is called
-once per candidate and a search runs hundreds of candidates. The
-policy selector maps $\pi{=}0$ to fixed-priority
-scheduling~\cite{liu1973scheduling}, run here without preemption, and
-$\pi\in\{1,2\}$ to round-robin with slice $\tau$. All requests in this workload carry the same priority,
-so the priority branch reduces to first-come-first-served and ignores
-$\tau$, and $\pi{=}1$ and $\pi{=}2$ select the same round-robin scheduler.
-Because $\tau$ and $\pi$ affect latency alone, and latency does not depend
-on $b$, the reference front can later be enumerated at a tractable cost.
+\input{tables/table_calibration}
 
-\begin{figure}[t]
-\centering
-\includegraphics[width=\columnwidth]{figures/fig_search}
-\caption{Search loop. The first $n_0{=}12$ designs come from a scrambled
-Sobol sequence and are evaluated before any model is fitted. Each later
-iteration refits one Gaussian process per metric, maximizes the
-acquisition function to choose the next design, evaluates it through the
-architecture of Fig.~\ref{fig:architecture}, and records the result. The
-loop closes after $N$ evaluations. Both problems share every step and
-differ only in the acquisition function.}
-\label{fig:search}
-\end{figure}
+Only int8 and fp32 exist on the board path. Int16 cycles are the int8 cycles
+scaled by $1.18$, the int16-to-int8 ratio measured on a Cortex-M4F for a
+framework without SIMD int8~\cite{novac2021mcu}. Int4 cycles are scaled by
+$1.14$, the 4-bit-weight overhead reported for CMix-NN~\cite{capotondi2020cmix}, measured
+on a Cortex-M7. Both are literature-derived estimates and were not benchmarked;
+int16 activations double the int8 buffer, and int4 uses the int8 buffer.
 
-Together, Eqs.~\eqref{eq:scalinglaw}--\eqref{eq:energy} and the latency
-simulator give every $\mathbf{x}\in\mathcal{X}$ its four quantities
-without a device measurement, as Fig.~\ref{fig:architecture} traces end
-to end. The search itself is Bayesian
-optimization~\cite{shahriari2016review}, run on the Ax platform with a
-BoTorch backend. It neither samples blindly nor sweeps the whole space.
-From every design tried so far it builds a statistical picture of each
-outcome, and that picture gives a prediction and an uncertainty for any
-design not yet tried. Choosing the next design then balances two pulls:
-regions the model already expects to be good, and regions it is still
-unsure about, where a surprise is most likely. The new result is folded
-in and the picture is refitted. Concretely, a Gaussian process
-(\textsc{SingleTaskGP}) is fitted independently to each modeled outcome,
-namely accuracy, energy, and latency. Every evaluation is deterministic
-given $\mathbf{x}$, and each result is reported to the optimizer with
-zero observation noise. The first $n_0{=}2d{=}12$ designs come from a
-Sobol sequence~\cite{sobol1967points} with Owen
-scrambling~\cite{owen1998scrambling}, which spreads points evenly across
-$\mathcal{X}$, where uniform random draws tend to clump. Every later
-design maximizes an acquisition function, as Fig.~\ref{fig:search} lays
-out. For Eq.~\eqref{eq:soo} it is $q$LogNEI, a log-transformed form of
-noisy expected improvement~\cite{jones1998efficient,letham2019constrained};
-for Eq.~\eqref{eq:moo} it is $q$LogNEHVI, the matching log-transformed
-form of expected hypervolume improvement~\cite{emmerich2006single}. The
-log transform keeps both numerically stable as the improvement nears
-zero. Constraints act inside the acquisition function, weighting each
-candidate by its modeled probability of meeting
-them~\cite{letham2019constrained}, so an unacceptable design still shows
-the model where the boundary lies. The single-objective search carries
-both constraints of \eqref{eq:feasible} this way. The multi-objective
-search carries the latency limit; its accuracy floor is applied when the
-front is scored, and only acceptable designs count toward it.
+\subsection{Accuracy Table}
+\label{sec:accuracy}
+Accuracy is a table lookup over the $20$ architectures and four
+precisions, as in tabular benchmarks of architecture
+search~\cite{dong2021nats}, with no interpolation. Each architecture is
+trained for $50$ epochs with Adam (learning rate $10^{-3}$, weight decay
+$10^{-4}$, cosine decay), batch size $128$, random crops with padding $4$, and
+horizontal flips. The training split of $45{,}000$ images and the validation
+split of $5{,}000$ are fixed; the checkpoint with the best validation accuracy
+is kept, and the test split is read once, at the end~\cite{lones2024pitfalls}.
+Every convolution and linear layer is quantized after batch-norm folding.
+Int16 and int8 use post-training quantization with per-channel symmetric
+weights, per-tensor activations, and $1{,}000$ calibration images. Int4 uses
+int4 weights with int8 activations, fine-tuned by quantization-aware
+training~\cite{sher2023qat} for $9$ epochs at learning rate $10^{-4}$; $9$ is
+the smallest count after which no later epoch of a $10$-epoch pilot, run on
+two architectures, improved validation accuracy by $0.2$ points. Three
+architectures were retrained with two more seeds. Table entries use seed $1$;
+the other seeds measure noise, which has a standard deviation of $0.44$
+points on average at fp32, $0.47$ at int8, and $1.26$ at int4. Validation
+accuracy at int4 is below fp32 for all $20$ architectures, by $1.70$ points on
+average and by $5.08$ at most. Two designs whose accuracies differ by less
+than the noise are not distinguishable.
+
+\input{tables/table_accuracy}
+
+\subsection{Problem Statement}
+\label{sec:problem}
+The search maximizes accuracy and minimizes energy per inference,
+\begin{gather}
+\max_{\mathbf{x}}\ \bigl(\mathrm{acc}(\mathbf{x}),\,-E(\mathbf{x})\bigr)
+\ \ \text{s.t.}\ \ \mathrm{acc}\geq 0.75,\notag\\
+\ell_{95}\leq 100\,\text{ms},\ \ r_{\mathrm{miss}}\leq 1\%,\notag\\
+\text{flash}\leq 512\,\text{KB},\ \ \text{SRAM}\leq 128\,\text{KB},
+\label{eq:problem}
+\end{gather}
+where $\ell_{95}$ is the $95$th-percentile inference latency over the $50$
+requests and $r_{\mathrm{miss}}$ the fraction of periodic jobs that miss their
+deadline, a small share of which is tolerated as in weakly hard real-time
+analysis~\cite{pazzaglia2021weakly}. A design that breaks a memory limit skips the simulation and
+returns infinite latency and energy; it still counts as one evaluation. Search
+quality is the hypervolume of the accepted designs against a reference corner.
+Corner A is $(0.70,\ 17{,}000\,\mu\mathrm{J})$ and corner B is
+$(0.75,\ 23{,}000\,\mu\mathrm{J})$, both fixed before any search and both
+reported, because rankings can depend on the corner~\cite{pang2024reference}.
+Hypervolume is in units of accuracy fraction times $\mu$J and is expressed as
+a percentage of the reference front's value.
+
+\subsection{Search Methods and Protocol}
+\label{sec:methods}
+Six methods receive $100$ evaluations each, over seeds $1$ to $20$, through
+one harness that owns the design space, the call to the evaluator, the
+constraints, and the hypervolume trace, so that nothing but the proposal rule
+differs. Flash and SRAM enter as one constraint, the larger of the two
+utilizations, and the accuracy floor is a constraint for every method.
+\emph{qNEHVI} fits one Gaussian process per outcome, starts from $12$
+Sobol points, and maximizes the noisy log expected hypervolume improvement
+with outcome constraints~\cite{low2024constrained,mamun2025mobo}, through
+Ax~1.3.1 and BoTorch~0.18.1. \emph{qNParEGO} is the same with random
+Chebyshev scalarization. Ax cannot form a hypervolume reference while no
+evaluated design is acceptable, so both receive corner A as objective
+thresholds; the other methods use no reference point. \emph{NSGA-II} is
+pymoo~0.6.2~\cite{blank2020pymoo} with a population of $10$ and
+constraint-domination, and \emph{MOTPE} is the multi-objective
+tree-structured Parzen estimator~\cite{ozaki2022motpe} in Optuna~5.0.0 with its
+constraint hook and $12$ random start trials. \emph{Random} samples the mixed
+space uniformly. \emph{Sequential} is the ablation: a first qNEHVI stage of
+$50$ evaluations searches $(L,w,b)$ with $\tau=10$\,ms, equal priority, and
+$180$\,MHz, and a second stage of $50$ evaluations searches the scheduler
+variables for a network chosen from the first stage's front.
+
+Each adapter translates the one design space into its library's encoding.
+The Ax methods use integer ranges over the index of each ordered choice,
+a categorical variable for priority, and a continuous slice; this took $5$ to
+$15$\,s per model fit, against $12$ to $30$\,s with categorical ordered
+choices. Designs that break a memory limit have no latency or energy. The
+Ax methods record only their accuracy and memory utilization, while
+NSGA-II and MOTPE receive a large finite energy that ranks them last.
+
+The reference front comes from evaluating $12{,}000$ designs, the full grid of
+$L$, $w$, $b$, $f$, $\pi$, and ten log-spaced values of $\tau$. The metrics
+are hypervolume~\cite{guerreiro2022hypervolume} at $25$, $50$, and $100$
+evaluations, the evaluations needed to reach $90\%$ of the reference value,
+and the inverted generational distance~\cite{cai2021igd} to the reference
+front, with objectives scaled by the corner-A box. A Friedman test compares
+the six methods; qNEHVI is compared with each other method by a one-sided
+Wilcoxon signed-rank test with Holm correction~\cite{carrasco2020stats} and by Cliff's
+$\delta$~\cite{ismail2026stats}. Each $p$-value is reported with the smallest
+value that $20$ pairs can reach.
+
+Hypervolume after $n$ evaluations is expressed as
+\begin{equation}
+\mathrm{HV}_\%(n)=100\,\frac{\mathrm{HV}\bigl(S_n\bigr)}{\mathrm{HV}\bigl(R\bigr)},
+\label{eq:hv}
+\end{equation}
+where $S_n$ is the set of acceptable designs among the first $n$ evaluations and
+$R$ the reference front; evaluations to $90\%$ is the smallest $n$ with
+$\mathrm{HV}_\%(n)\geq90$, and a seed that never gets there counts as never.
+Every stage, from the Cloud import to the tables, runs through one command
+line entry point that stores each result by name, and the $120$ search runs
+needed about $2.3$ hours of proposal and evaluation time per seed on a
+fanless M4 laptop, in chunks of at most an hour.
