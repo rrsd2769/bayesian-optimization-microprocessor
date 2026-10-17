@@ -1,0 +1,24 @@
+\begin{table}[t]
+\centering
+\caption{Reference Front}
+\label{tab:front}
+\footnotesize
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{|c|c|c|c|l|c|c|c|c|c|}
+\hline
+\rowcolor{tblhead}
+\textbf{$L$} & \textbf{$w$} & \textbf{$b$} & \textbf{$\tau$} & \textbf{$\pi$} & \textbf{$f$} & \textbf{Val.} & \textbf{Test} & \textbf{$E$} & \textbf{$\ell_{95}$} \\
+\hline
+4 & 0.25 & 8 & 10.3 & equal & 120 & 0.7672 & 0.7735 & 9{,}610 & 56.6 \\
+\hline
+5 & 0.25 & 8 & 10.3 & equal & 120 & 0.7916 & 0.7830 & 10{,}010 & 69.6 \\
+\hline
+5 & 0.25 & 16 & 1.0 & below & 120 & 0.7946 & 0.7838 & 10{,}718 & 96.3 \\
+\hline
+4 & 0.4375 & 8 & 1.0 & below & 180 & 0.8246 & 0.8229 & 14{,}782 & 92.8 \\
+\hline
+\end{tabular}}
+
+\vspace{2pt}
+{\footnotesize $\tau$ in ms, $f$ in MHz, $E$ in $\mu$J per inference, $\ell_{95}$ in ms; accuracy is validation (table) and test.}
+\end{table}

@@ -2,37 +2,36 @@
 % CONCLUSION
 %=============================================================
 
-Treating a convolutional network's architecture and the scheduler that
-runs it as one six-dimensional design problem, instead of tuning each
-alone, let a directed search come close to a reference front enumerated
-over $92{,}412$ designs at a small fraction of the cost. It matched the
-single-objective energy optimum in 30 evaluations where grid search used
-972, and it recovered $98.4\%$ of the reference hypervolume in 100. Its
-margin over random sampling at equal cost held on every repeated seed,
-30 of 30 and 15 of 15, so the advantage belongs to the search method and
-not to one lucky run.
+Searching network architecture, weight precision, and scheduler settings of
+a microcontroller as one problem found the accuracy--energy front more
+reliably than every alternative tested. Joint qNEHVI reached a median of
+$100\%$ of the reference hypervolume in $100$ evaluations and $90\%$ in a
+median of $28$, ahead of qNParEGO ($99.6\%$), MOTPE ($91.0\%$), Random
+($74.8\%$), and NSGA-II ($56.0\%$) over $20$ seeds. A two-stage search that fixes
+the scheduler before the network stalled at $91.2\%$ in all seeds, because the
+fixed clock excluded three of the four front designs; joint search beat it by
+$8.8$ points.
 
-Two decisions kept the search cheap to run. The four quantities come
-from two kinds of model: closed-form or regression models for accuracy,
-memory, and energy, and a discrete-event simulation for latency alone.
-An evaluation took milliseconds, yet the queueing that latency depends
-on was simulated and not approximated away. Constraints also act inside
-the acquisition function, which steers proposals toward designs likely
-to be acceptable and spends few evaluations on designs no accuracy gain
-could rescue. Neither decision depends on this network or this device.
-Any joint architecture--scheduler problem trades evaluation realism
-against evaluation count, and pricing each quantity by how hard it is to
-obtain keeps a directed search affordable without a coarser model of the
-target hardware.
+The evaluation behind these results was checked against silicon where
+that was possible. Cycles for eight networks outside the calibration set were
+predicted within $7.6\%$, and $4.8\%$ on average, with a bias toward
+underestimation of $4.5\%$. Flash and RAM errors were $1.6\%$ and $6.6\%$
+on average. Energy is a datasheet model and was not measured, and the int16
+and int4 cycle ratios come from the literature.
 
-The reference front rests on a fixed bit-width grid, three simulated time
-slices, and a single simulated core, and the accuracy behind every result
-is a regression estimate, not a measurement at each candidate. The next
-step is to test whether the evaluation-cost advantage survives as each of
-these simplifications is removed in turn: a finer bit-width grid with real
-4-bit kernels, a heterogeneous multi-core target, and accuracy measured
-on quantized hardware. Training one network that specializes to many
-deployment targets~\cite{cai2022enable} could replace the regression
-surface. Running the selected designs on a production tinyML runtime with
-measured power~\cite{lin2023tinyml,ray2022tinyml} would then close the
-remaining gap between simulated and measured performance.
+For a designer, the practical finding is that clock and priority belong in
+the same search as the network. Three of the four best designs run at
+$120$\,MHz, a clock the Sequential search excluded by fixing $180$\,MHz first.
+Where one evaluation costs seconds or more, as a training run or a board
+measurement does, a joint model-based search reached $90\%$ of the reference
+hypervolume in a median of $28$ evaluations, while MOTPE and
+Sequential needed $54$ and $65$, and Random and NSGA-II reached it in one
+seed of $20$.
+
+Three limits bound the conclusions. The reference front has four designs
+among $378$ acceptable, so the space is small, and the margin over Random
+belongs to this problem. Accuracy is one training seed per architecture. The
+workload is a synthetic task set on a single core. The next steps are
+measuring energy on a board with a current probe, benchmarking int4 and int16
+kernels, and repeating the comparison on a larger space, where the two-stage
+cap and the margin over Random can be tested again.

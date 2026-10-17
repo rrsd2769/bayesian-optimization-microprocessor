@@ -37,8 +37,8 @@ def test_num_uses_scientific_form_for_small_values():
 def test_every_figure_and_table_is_generated_from_the_store(tmp_path):
     figs = figures.make_all(tmp_path / "f")
     tabs = tables.make_all(tmp_path / "t")
-    assert len(figs) == 3 and len(tabs) == 5
+    assert len(figs) == 3 and len(tabs) == 8
     assert all(p.stat().st_size > 1000 for p in figs)
     for p in tabs:
         text = p.read_text()
-        assert text.count("\\begin{table}") == 1 and "\\rowcolor{tblhead}" in text and "nan" not in text
+        assert text.count("\\begin{table") == 1 and "\\rowcolor{tblhead}" in text and "nan" not in text

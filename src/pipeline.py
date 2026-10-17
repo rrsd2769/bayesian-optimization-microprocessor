@@ -163,6 +163,25 @@ def test_accuracy(args):
         print(f"{x['arch']} b={x['b']}: validation {x['predicted_val_accuracy']:.4f} -> test {x['test_accuracy']:.4f}")
 
 
+@stage("paper-numbers", "collect every number the paper quotes", ["paper_numbers"])
+def paper_numbers(args):
+    from src.report.paper_numbers import collect
+    out = collect()
+    results.save("paper_numbers", out)
+    print(f"paper_numbers: {sum(1 for _ in _leaves(out))} values")
+
+
+def _leaves(x):
+    if isinstance(x, dict):
+        for v in x.values():
+            yield from _leaves(v)
+    elif isinstance(x, (list, tuple)):
+        for v in x:
+            yield from _leaves(v)
+    else:
+        yield x
+
+
 @stage("report", "regenerate every figure and table from the results store", [])
 def report(args):
     import shutil

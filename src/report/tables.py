@@ -35,16 +35,17 @@ def num(x: float, digits: int = 2) -> str:
     return f"{x:.{digits}f}"
 
 
-def _table(label: str, caption: str, spec: str, header: list, rows: list, note: str = "") -> str:
-    lines = ["\\begin{table}[t]", "\\centering", f"\\caption{{{caption}}}", f"\\label{{tab:{label}}}",
+def _table(label: str, caption: str, spec: str, header: list, rows: list, note: str = "", wide: bool = False) -> str:
+    env = "table*" if wide else "table"
+    lines = [f"\\begin{{{env}}}[t]", "\\centering", f"\\caption{{{caption}}}", f"\\label{{tab:{label}}}", "\\footnotesize" if not wide else "\\small", "\\resizebox{\\columnwidth}{!}{%" if not wide else "",
              f"\\begin{{tabular}}{{{spec}}}", "\\hline", "\\rowcolor{tblhead}",
              " & ".join(f"\\textbf{{{h}}}" for h in header) + " \\\\", "\\hline"]
     for r in rows:
         lines += [" & ".join(str(c) for c in r) + " \\\\", "\\hline"]
-    lines.append("\\end{tabular}")
+    lines.append("\\end{tabular}" + ("" if wide else "}"))
     if note:
         lines += ["", "\\vspace{2pt}", f"{{\\footnotesize {note}}}"]
-    lines.append("\\end{table}")
+    lines.append(f"\\end{{{env}}}")
     return "\n".join(lines) + "\n"
 
 
@@ -101,7 +102,7 @@ def _med(stat: dict, digits: int = 1) -> str:
 
 def _evals(stat: dict) -> str:
     if math.isinf(stat["median"]):
-        return f"never ({stat['n_infinite']}/{stat['n']})"
+        return f"never"
     return f"{stat['median']:.0f}"
 
 
@@ -121,7 +122,7 @@ def tab_methods() -> str:
             "corner A, and at corner B in the next column. $p$ is the one-sided Wilcoxon test of qNEHVI against the method "
             "with Holm correction, and $\\delta$ is Cliff's delta.")
     return _table("methods", "Method Comparison", "|l|c|c|c|c|c|c|",
-                  ["Method", "HV$_A$ (\\%)", "HV$_B$ (\\%)", "Evals. to 90\\%", "IGD", "$p$", "$\\delta$"], rows, note)
+                  ["Method", "HV$_A$ (\\%)", "HV$_B$ (\\%)", "Evals. to 90\\%", "IGD", "$p$", "$\\delta$"], rows, note, wide=True)
 
 
 def tab_hardware() -> str:
@@ -134,8 +135,56 @@ def tab_hardware() -> str:
     return _table("hardware", "Hardware Validation Error (\\%)", "|l|c|c|c|c|", ["Models", "n", "Cycles", "Flash", "RAM"], rows, note)
 
 
+def tab_front() -> str:
+    f = results.load("reference_front").sort_values("energy_uj")
+    ta = {d["arch"] + f"_b{d['b']}": d for d in results.load("test_accuracy")["designs"]}
+    mhz = [p.f_mhz for p in Scenario.nominal().device.points]
+    rows = []
+    for _, r in f.iterrows():
+        t = ta[f"L{int(r['L'])}_w{r['w']:g}_b{int(r['b'])}"]
+        rows.append([int(r["L"]), f"{r['w']:g}", int(r["b"]), f"{r['tau']:.1f}", r["pi"], mhz[int(r["f_idx"])],
+                     f"{r['accuracy']:.4f}", f"{t['test_accuracy']:.4f}", f"{r['energy_uj']:,.0f}".replace(",", "{,}"),
+                     f"{r['latency_ms']:.1f}"])
+    return _table("front", "Reference Front", "|c|c|c|c|l|c|c|c|c|c|",
+                  ["$L$", "$w$", "$b$", "$\\tau$", "$\\pi$", "$f$", "Val.", "Test", "$E$", "$\\ell_{95}$"], rows,
+                  "$\\tau$ in ms, $f$ in MHz, $E$ in $\\mu$J per inference, $\\ell_{95}$ in ms; accuracy is validation (table) and test.")
+
+
+SENS_CASES = (("nominal", "Nominal"), ("lat50_miss1", "Latency 50 ms"), ("lat200_miss1", "Latency 200 ms"),
+              ("lat100_miss0", "Miss limit 0\\%"), ("lat100_miss5", "Miss limit 5\\%"), ("latency_mean", "Mean latency"),
+              ("idle_stop", "Stop-mode idle"), ("kernel_x0.5", "Switch and tick $\\times0.5$"),
+              ("kernel_x2", "Switch and tick $\\times2$"), ("r4_x0.5", "Int4 overhead $\\times0.5$"),
+              ("taskset_u20", "Task set, 20\\% load"), ("taskset_u50", "Task set, 50\\% load"))
+
+
+def tab_sensitivity() -> str:
+    sens = results.load("sensitivity").set_index("case")
+    mhz = [p.f_mhz for p in Scenario.nominal().device.points]
+    rows = []
+    for key, label in SENS_CASES:
+        r = sens.loc[key]
+        clocks = ", ".join(str(mhz[int(i)]) for i in str(r["front_f"]).split())
+        rows.append([label, int(r["n_acceptable"]), int(r["n_front"]), str(r["front_b"]).replace(" ", ", "),
+                     str(r["front_L"]).replace(" ", ", "), clocks])
+    return _table("sensitivity", "Reference Front Under Changed Scenarios", "|l|c|c|c|c|l|",
+                  ["Case", "Acceptable", "Front", "$b$", "$L$", "$f$ (MHz)"], rows)
+
+
+def tab_calibration() -> str:
+    cyc, mem = results.load("cycle_calibration")["report"], results.load("memory_calibration")["report"]
+    names = (("Cycles, int8", cyc["cycles_int8"]), ("Cycles, fp32", cyc["cycles_fp32"]),
+             ("Kernel flash, int8", mem["kflash8"]), ("Kernel flash, fp32", mem["kflash32"]),
+             ("Kernel RAM, int8", mem["kram8"]), ("Kernel RAM, fp32", mem["kram32"]),
+             ("Activations, int8", mem["act8"]), ("Activations, fp32", mem["act32"]))
+    rows = [[n, r["n"], f"{r['r2']:.3f}", f"{r['loo_mean_rel_err'] * 100:.1f}", f"{r['loo_max_rel_err'] * 100:.1f}"] for n, r in names]
+    return _table("calibration", "Calibration Quality", "|l|c|c|c|c|",
+                  ["Quantity", "n", "$R^2$", "LOO mean (\\%)", "LOO max (\\%)"], rows,
+                  "Leave-one-architecture-out (LOO) relative error of the fits to the Cloud benchmarks.")
+
+
 TABLES = {"table_space": tab_space, "table_constants": tab_constants, "table_accuracy": tab_accuracy,
-          "table_methods": tab_methods, "table_hardware": tab_hardware}
+          "table_methods": tab_methods, "table_hardware": tab_hardware,
+          "table_calibration": tab_calibration, "table_front": tab_front, "table_sensitivity": tab_sensitivity}
 
 
 def make_all(out: Path) -> list:
