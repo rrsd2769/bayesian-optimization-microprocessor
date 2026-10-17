@@ -1,0 +1,27 @@
+\begin{table}[t]
+\centering
+\caption{Workload and Device Constants}
+\label{tab:constants}
+\begin{tabular}{|l|l|}
+\hline
+\rowcolor{tblhead}
+\textbf{Item} & \textbf{Value} \\
+\hline
+Device & STM32F446RE, 512 KB flash, 128 KB SRAM, 3.3 V \\
+\hline
+Task sensor & period 10 ms, 90{,}000 cycles, priority 3 \\
+\hline
+Task comms & period 50 ms, 360{,}000 cycles, priority 2 \\
+\hline
+Inference requests & 50, Poisson, mean interarrival 200 ms, jitter $\pm$5\% \\
+\hline
+Inference priority levels & below = 1, equal = 2, above = 4 \\
+\hline
+Context switch, tick & 390 cycles, 100 cycles \\
+\hline
+Idle mode & sleep \\
+\hline
+Limits & p95 latency $\leq$ 100 ms, miss ratio $\leq$ 0.01, accuracy $\geq$ 0.75 \\
+\hline
+\end{tabular}
+\end{table}

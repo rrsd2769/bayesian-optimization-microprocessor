@@ -163,6 +163,21 @@ def test_accuracy(args):
         print(f"{x['arch']} b={x['b']}: validation {x['predicted_val_accuracy']:.4f} -> test {x['test_accuracy']:.4f}")
 
 
+@stage("report", "regenerate every figure and table from the results store", [])
+def report(args):
+    import shutil
+    import subprocess
+    from config import FIGURES_DIR, PROJECT_ROOT
+    from src.report import figures, tables
+    paths = figures.make_all(FIGURES_DIR) + tables.make_all(PROJECT_ROOT / "paper" / "tables")
+    tex = PROJECT_ROOT / "paper" / "figures" / "fig_architecture.tex"
+    if shutil.which("tectonic"):
+        subprocess.run(["tectonic", "-X", "compile", "--outdir", str(FIGURES_DIR), str(tex)], check=True)
+        paths.append(FIGURES_DIR / "fig_architecture.pdf")
+    for p in paths:
+        print(p.relative_to(PROJECT_ROOT))
+
+
 @stage("cloud-calib", "manual: benchmark the models on the Cloud, then check coverage", ["cloud_board"])
 def cloud_calib(args):
     expected = [(a.name, p) for a in calib_archs() for p in ("fp32", "int8")]
