@@ -375,11 +375,16 @@ def front(args):
 
 def sensitivity_cases(base):
     """Every sensitivity case as a Scenario derived from the nominal one."""
+    from dataclasses import replace
     cases = {"nominal": base}
     for lat in (50, 100, 200):
         for miss in (0.0, 0.01, 0.05):
             if (lat, miss) != (100, 0.01):
                 cases[f"lat{lat}_miss{round(miss * 100)}"] = base.with_limits(latency_ms=float(lat), miss_ratio=miss)
+    for floor in (0.70, 0.80):  # the 0.75 floor is a chosen value with no published source, so it is varied
+        cases[f"acc{round(floor * 100)}"] = base.with_limits(accuracy_floor=floor)
+    for kb in (16, 64):         # the 32 KB RTOS reserve (kernel, stacks, heap) is assumed, so it is varied
+        cases[f"reserve{kb}"] = base.but(memory_cal=replace(base.memory_cal, rtos_reserve=kb * 1024))
     cases["idle_stop"] = base.but(idle_mode="stop")
     cases["latency_mean"] = base.with_limits(latency_stat="mean")
     for k in (0.5, 2.0):
