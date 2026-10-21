@@ -2,7 +2,7 @@
 % Joint Bayesian Optimization of CNN Architecture and RTOS
 % Scheduler Parameters for Energy-Efficient Edge Inference
 %
-% IEEE conference format. Compiles on Overleaf with pdfLaTeX.
+% IEEE conference format. Compiles with tectonic/pdfLaTeX.
 %=============================================================
 \documentclass[conference]{IEEEtran}
 \IEEEoverridecommandlockouts
@@ -15,27 +15,12 @@
 \usepackage{booktabs}
 \usepackage{multirow}
 \usepackage{url}
-
-% --- TikZ / PGF for the methodology diagrams -----------------
-\usepackage{tikz}
-\usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit,backgrounds,calc}
-
-% --- Shared TikZ styles used by all figures ------------------
-\tikzset{
-  box/.style        = {rectangle, rounded corners=2pt, draw=black!70,
-                       fill=black!3, align=center, inner sep=3pt,
-                       font=\scriptsize, minimum height=6mm},
-  parambox/.style   = {box, fill=blue!6,  draw=blue!55},
-  modelbox/.style   = {box, fill=orange!8, draw=orange!65},
-  metricbox/.style  = {box, fill=green!8, draw=green!55},
-  decision/.style   = {diamond, aspect=2, draw=black!70, fill=yellow!10,
-                       align=center, inner sep=1pt, font=\scriptsize},
-  grp/.style        = {rectangle, rounded corners=3pt, draw=black!35,
-                       dashed, inner sep=5pt},
-  flow/.style       = {-{Stealth[length=4pt]}, draw=black!65, thick},
-  flowdash/.style   = {-{Stealth[length=4pt]}, draw=black!45, thick, dashed},
-  lbl/.style        = {font=\tiny, inner sep=1pt, fill=white}
-}
+\usepackage{colortbl}
+\usepackage[labelsep=colon,justification=raggedright,singlelinecheck=false,labelfont=bf]{caption}
+\renewcommand{\thetable}{\arabic{table}}
+\renewcommand{\tablename}{Table}
+\definecolor{tblhead}{gray}{0.85}
+\graphicspath{{../figures/v2/}}
 
 \begin{document}
 
@@ -43,15 +28,31 @@
        RTOS Scheduler Parameters for Energy-Efficient\\
        Edge Inference}
 
-\author{\IEEEauthorblockN{Author Names}
-\IEEEauthorblockA{Affiliation\\
-Email: author@example.com}}
+\author{
+\IEEEauthorblockN{Sahil Dhanuka, Shankesh Kumar, Jenila Vincent}
+\IEEEauthorblockA{School of Computer Science and Engineering\\
+VIT Vellore, Vellore, Tamil Nadu, India}
+}
 
 \maketitle
 
 \begin{abstract}
-% TODO: written last, after Results are locked.
-Placeholder abstract.
+The energy a microcontroller spends per inference depends on the
+network, through depth, width, and weight precision, and on the real-time
+operating system (RTOS) that schedules it, through time slice, priority, and
+clock. This study searches both as one six-variable problem, accuracy
+against energy per inference under accuracy, latency, deadline-miss, and
+memory constraints. Accuracy is a table of $26$ trainings with
+whole-network quantization at $4$, $8$, $16$, and $32$ bits. Cycles and
+memory are calibrated on an STM32 board, and on eight further networks the
+cycle predictions err by $4.8\%$ on average and $7.6\%$ at most. Latency and
+deadline misses come from a deterministic RTOS simulation, and energy from
+datasheet currents. Full enumeration of $12{,}000$ designs gives a reference
+front of four designs among $378$ acceptable ones. Six methods are compared
+over $20$ seeds at $100$ evaluations. Joint qNEHVI reaches a median of $100\%$
+of the reference hypervolume, and $90\%$ in $28$ evaluations; qNParEGO reaches
+$99.6\%$, MOTPE $91.0\%$, Random $74.8\%$, and NSGA-II $56.0\%$. A two-stage
+search that fixes the scheduler first stalls at $91.2\%$.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -60,18 +61,20 @@ optimization, embedded systems, energy efficiency, real-time scheduling.
 \end{IEEEkeywords}
 
 \section{Introduction}
-% TODO -- Phase 3
+\label{sec:intro}
+\input{intro}
+
+\section{Methodology}
+\label{sec:methodology}
 \input{methodology}
 
-\section{Results}
-% TODO -- Phase 3
-
-\section{Threats to Validity}
-\label{sec:threats}
-% TODO -- Phase 3
+\section{Results and Discussion}
+\label{sec:results}
+\input{results}
 
 \section{Conclusion}
-% TODO -- Phase 3
+\label{sec:conclusion}
+\input{conclusion}
 
 \bibliographystyle{IEEEtran}
 \bibliography{refs}

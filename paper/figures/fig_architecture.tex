@@ -1,0 +1,62 @@
+% ------------------------------------------------------------------
+% Fig. 1 -- Evaluation pipeline of one design.
+% Grayscale only. Left to right: design vector -> layer profile ->
+% {accuracy, memory, cycle} models -> workload simulator -> energy
+% model -> constraint check -> objectives.
+% Compile on its own:  tectonic -X compile paper/figures/fig_architecture.tex
+% ------------------------------------------------------------------
+\documentclass[tikz,border=5pt]{standalone}
+\usepackage{amsmath,amssymb}
+\usetikzlibrary{positioning,arrows.meta,calc}
+
+\begin{document}
+\begin{tikzpicture}[
+    thick, font=\small,
+    blk/.style   = {rounded corners=3pt, draw=black!75, align=center, inner sep=5pt},
+    inp/.style   = {blk, fill=black!8,  text width=24mm},
+    prof/.style  = {blk, fill=black!18, text width=26mm},
+    mdl/.style   = {blk, fill=black!12, text width=40mm},
+    sim/.style   = {blk, fill=black!24, text width=32mm},
+    nrg/.style   = {blk, fill=black!30, text width=24mm},
+    gate/.style  = {blk, fill=black!38, text width=34mm},
+    obj/.style   = {blk, fill=black!50, text width=34mm, text=white},
+    stage/.style = {font=\large\bfseries, text=black!75},
+    arrow/.style = {>={LaTeX[width=3.2mm,length=3.2mm]}, ->, line width=0.9ex,
+                    gray!65, shorten <=2mm, shorten >=2mm},
+  ]
+
+% stage 1: design vector
+\node[inp] (net) at (0, 1.0)  {\textbf{Network}\\ $L,\ w,\ b$};
+\node[inp] (rt)  at (0,-1.0)  {\textbf{Runtime}\\ $\tau,\ \pi,\ f$};
+
+% stage 2: layer profile
+\node[prof] (prof) at (5.2, 2.6) {\textbf{Layer profile}\\ MACs, weights,\\ output volumes};
+
+% stage 3: models on the profile
+\node[mdl] (acc) at (11.2, 4.0)  {\textbf{Accuracy}\\ measured table, $(L,w,b)$};
+\node[mdl] (mem) at (11.2, 2.6)  {\textbf{Memory}\\ flash and SRAM};
+\node[mdl] (cyc) at (11.2, 1.2)  {\textbf{Cycles}\\ per inference, $b$ and flash wait states};
+
+% stage 4: workload simulation and energy
+\node[sim] (sim) at (16.8, 1.2)  {\textbf{Workload simulator}\\ tasks, $\tau$, $\pi$, $f$};
+\node[nrg] (en)  at (16.8,-1.0)  {\textbf{Energy}\\ datasheet currents};
+
+% stage 5: decision
+\node[gate] (g) at (22.0, 3.0)   {\textbf{Constraints}\\ accuracy, memory,\\ latency, deadline misses};
+\node[obj]  (o) at (22.0,-0.6)   {\textbf{Objectives}\\ $\max$ accuracy,\\ $\min$ energy};
+
+\draw[arrow] (net.east) to[out=0,in=180] (prof.west);
+\draw[arrow] (prof.east) to[out=0,in=180] (mem.west);
+\draw[arrow] (prof.east) to[out=0,in=180] (cyc.west);
+\draw[arrow] (net.north east) to[out=60,in=180] (acc.west);
+\draw[arrow] (cyc) -- (sim);
+\draw[arrow] (rt.east) to[out=0,in=180] (sim.south west);
+\draw[arrow] (sim) -- (en);
+\draw[arrow] (mem.east) to[out=0,in=180] (g.west);
+\draw[arrow] (sim.east) to[out=0,in=180] (g.south west);
+\draw[arrow] (acc.east) to[out=0,in=140] (g.north west);
+\draw[arrow] (en.east) to[out=0,in=180] (o.west);
+\draw[arrow] (g) -- (o);
+
+\end{tikzpicture}
+\end{document}

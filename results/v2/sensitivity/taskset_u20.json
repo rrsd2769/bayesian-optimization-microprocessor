@@ -1,0 +1,36 @@
+{
+  "case": "taskset_u20",
+  "front_composition": {
+    "L": {
+      "4": 1,
+      "5": 2
+    },
+    "b": {
+      "16": 1,
+      "8": 2
+    },
+    "f_idx": {
+      "2": 2,
+      "3": 1
+    },
+    "pi": {
+      "below": 2,
+      "equal": 1
+    }
+  },
+  "grid_size": 12000,
+  "hypervolume": {
+    "A": 424.5631786175274,
+    "B": 458.3571550141521
+  },
+  "n_acceptable": 299,
+  "n_front": 3,
+  "rejected": {
+    "accuracy": 4200,
+    "flash": 2250,
+    "latency": 7153,
+    "memory_infeasible": 3150,
+    "miss_ratio": 4211,
+    "sram": 1800
+  }
+}

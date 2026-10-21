@@ -1,0 +1,25 @@
+\begin{table}[t]
+\centering
+\caption{Design Space}
+\label{tab:space}
+\footnotesize
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{|l|c|l|c|}
+\hline
+\rowcolor{tblhead}
+\textbf{Parameter} & \textbf{Symbol} & \textbf{Values} & \textbf{Type} \\
+\hline
+Convolutional layers & $L$ & 2, 3, 4, 5 & 4 values \\
+\hline
+Width multiplier & $w$ & 0.25, 0.4375, 0.625, 0.8125, 1 & 5 values \\
+\hline
+Weight bit-width & $b$ & 4, 8, 16, 32 & 4 values \\
+\hline
+Time slice (ms) & $\tau$ & [1, 20] & range \\
+\hline
+Inference priority & $\pi$ & below, equal, above & 3 values \\
+\hline
+Clock (MHz) & $f$ & 30, 60, 120, 150, 180 & 5 values \\
+\hline
+\end{tabular}}
+\end{table}

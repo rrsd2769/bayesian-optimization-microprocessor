@@ -6,3 +6,12 @@ data/
 logs/*.log
 # LaTeX build artifacts
 paper/build/
+
+# third-party reference PDFs (datasheets)
+docs/reference/*.pdf
+results/v2/exports/
+logs/
+
+# v2 model checkpoints and paper preview builds
+checkpoints/v2/
+paper/build_preview/

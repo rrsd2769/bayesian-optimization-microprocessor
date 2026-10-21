@@ -1,0 +1,654 @@
+{
+  "held_out": {
+    "models": [
+      {
+        "arch": "L2_w0.4375",
+        "cycles": {
+          "error_pct": -6.1838085244430125,
+          "measured": 4224581.0,
+          "predicted": 3963341.0
+        },
+        "flash_bytes": {
+          "error_pct": -6.299005015312975,
+          "measured": 32437.0,
+          "predicted": 30393.79174318293
+        },
+        "precision": "int8",
+        "ram_bytes": {
+          "error_pct": -8.550884747489839,
+          "measured": 15384.0,
+          "predicted": 14068.531890446164
+        }
+      },
+      {
+        "arch": "L2_w0.8125",
+        "cycles": {
+          "error_pct": -6.052720773796672,
+          "measured": 9718522.0,
+          "predicted": 9130287.0
+        },
+        "flash_bytes": {
+          "error_pct": -1.3167809365552618,
+          "measured": 44825.0,
+          "predicted": 44234.7529451891
+        },
+        "precision": "int8",
+        "ram_bytes": {
+          "error_pct": -8.447132448488315,
+          "measured": 22704.0,
+          "predicted": 20786.163048895214
+        }
+      },
+      {
+        "arch": "L3_w0.4375",
+        "cycles": {
+          "error_pct": -5.741459445840691,
+          "measured": 6267187.0,
+          "predicted": 5907359.0
+        },
+        "flash_bytes": {
+          "error_pct": -3.058850451448325,
+          "measured": 51645.0,
+          "predicted": 50065.256684349515
+        },
+        "precision": "int8",
+        "ram_bytes": {
+          "error_pct": 7.8970001537006285,
+          "measured": 16076.0,
+          "predicted": 17345.521744708913
+        }
+      },
+      {
+        "arch": "L3_w0.8125",
+        "cycles": {
+          "error_pct": -3.8320030721260334,
+          "measured": 16408181.0,
+          "predicted": 15779419.0
+        },
+        "flash_bytes": {
+          "error_pct": -0.35924866905425734,
+          "measured": 102097.0,
+          "predicted": 101730.21788635568
+        },
+        "precision": "int8",
+        "ram_bytes": {
+          "error_pct": 7.637023834128942,
+          "measured": 23396.0,
+          "predicted": 25182.758096232807
+        }
+      },
+      {
+        "arch": "L4_w0.4375",
+        "cycles": {
+          "error_pct": -7.603739835478274,
+          "measured": 8891835.0,
+          "predicted": 8215723.0
+        },
+        "flash_bytes": {
+          "error_pct": -1.2040602375963716,
+          "measured": 117293.0,
+          "predicted": 115880.72162551609
+        },
+        "precision": "int8",
+        "ram_bytes": {
+          "error_pct": -6.017467198428072,
+          "measured": 21248.0,
+          "predicted": 19969.408569678002
+        }
+      },
+      {
+        "arch": "L4_w0.8125",
+        "cycles": {
+          "error_pct": -6.251509117389986,
+          "measured": 25205130.0,
+          "predicted": 23629429.0
+        },
+        "flash_bytes": {
+          "error_pct": -0.21193799304028982,
+          "measured": 312977.0,
+          "predicted": 312313.6828275223
+        },
+        "precision": "int8",
+        "ram_bytes": {
+          "error_pct": -6.369000799645774,
+          "measured": 30296.0,
+          "predicted": 28366.447517739318
+        }
+      },
+      {
+        "arch": "L5_w0.4375",
+        "cycles": {
+          "error_pct": -1.5199868739828482,
+          "measured": 10147785.0,
+          "predicted": 9993540.0
+        },
+        "flash_bytes": {
+          "error_pct": 0.3450254870853042,
+          "measured": 230182.0,
+          "predicted": 230976.18656668268
+        },
+        "precision": "int8",
+        "ram_bytes": {
+          "error_pct": -7.994221933579526,
+          "measured": 24024.0,
+          "predicted": 22103.468122676855
+        }
+      },
+      {
+        "arch": "L5_w0.8125",
+        "cycles": {
+          "error_pct": 0.9229194297804666,
+          "measured": 29488923.0,
+          "predicted": 29761082.0
+        },
+        "flash_bytes": {
+          "error_pct": 0.16485915067667722,
+          "measured": 703114.0,
+          "predicted": 704273.1477686889
+        },
+        "precision": "int8",
+        "ram_bytes": {
+          "error_pct": 0.2108114857160004,
+          "measured": 30576.0,
+          "predicted": 30640.457719872524
+        }
+      }
+    ],
+    "n": 8,
+    "summary": {
+      "cycles": {
+        "mae_pct": 4.7635183841047475,
+        "max_pct": 7.603739835478274,
+        "mean_signed_pct": -4.5327885266596315
+      },
+      "flash_bytes": {
+        "mae_pct": 1.6199709925961827,
+        "max_pct": 6.299005015312975,
+        "mean_signed_pct": -1.4924998331556873
+      },
+      "ram_bytes": {
+        "mae_pct": 6.6404428251471375,
+        "max_pct": 8.550884747489839,
+        "mean_signed_pct": -2.7042339567607447
+      }
+    }
+  },
+  "in_sample": {
+    "models": [
+      {
+        "arch": "L2_w0.25",
+        "cycles": {
+          "error_pct": 1.6796277332988385,
+          "measured": 7082879.0,
+          "predicted": 7201845.0
+        },
+        "flash_bytes": {
+          "error_pct": 0.6099169661721859,
+          "measured": 26334.0,
+          "predicted": 26494.615533871784
+        },
+        "precision": "fp32",
+        "ram_bytes": {
+          "error_pct": 10.77351180527435,
+          "measured": 37012.0,
+          "predicted": 40999.492189368146
+        }
+      },
+      {
+        "arch": "L2_w0.25",
+        "cycles": {
+          "error_pct": 3.490373014778525,
+          "measured": 2305914.0,
+          "predicted": 2386399.0
+        },
+        "flash_bytes": {
+          "error_pct": 9.458296981955328,
+          "measured": 23221.0,
+          "predicted": 25417.311142179846
+        },
+        "precision": "int8",
+        "ram_bytes": {
+          "error_pct": 14.32233466291244,
+          "measured": 9368.0,
+          "predicted": 10709.716311221637
+        }
+      },
+      {
+        "arch": "L2_w0.625",
+        "cycles": {
+          "error_pct": -0.9924623475288774,
+          "measured": 25495073.0,
+          "predicted": 25242044.0
+        },
+        "flash_bytes": {
+          "error_pct": 0.23125063621787234,
+          "measured": 64266.0,
+          "predicted": 64414.61553387178
+        },
+        "precision": "fp32",
+        "ram_bytes": {
+          "error_pct": -7.029854326183593,
+          "measured": 107668.0,
+          "predicted": 100099.09644408464
+        }
+      },
+      {
+        "arch": "L2_w0.625",
+        "cycles": {
+          "error_pct": -0.0008049774654628195,
+          "measured": 6211354.0,
+          "predicted": 6211304.0
+        },
+        "flash_bytes": {
+          "error_pct": -3.497111872125247,
+          "measured": 37995.0,
+          "predicted": 36666.272344186014
+        },
+        "precision": "int8",
+        "ram_bytes": {
+          "error_pct": -9.627943011456718,
+          "measured": 19284.0,
+          "predicted": 17427.347469670687
+        }
+      },
+      {
+        "arch": "L2_w1",
+        "cycles": {
+          "error_pct": 1.7431096754522368,
+          "measured": 51091679.0,
+          "predicted": 51982263.0
+        },
+        "flash_bytes": {
+          "error_pct": 0.11112917001949718,
+          "measured": 122934.0,
+          "predicted": 123070.61553387178
+        },
+        "precision": "fp32",
+        "ram_bytes": {
+          "error_pct": 0.845475028379572,
+          "measured": 157864.0,
+          "predicted": 159198.70069880114
+        }
+      },
+      {
+        "arch": "L2_w1",
+        "cycles": {
+          "error_pct": 2.404461512538991,
+          "measured": 12421617.0,
+          "predicted": 12720290.0
+        },
+        "flash_bytes": {
+          "error_pct": 0.28752062664962885,
+          "measured": 52947.0,
+          "predicted": 53099.23354619218
+        },
+        "precision": "int8",
+        "ram_bytes": {
+          "error_pct": -5.015819716287407,
+          "measured": 25420.0,
+          "predicted": 24144.97862811974
+        }
+      },
+      {
+        "arch": "L3_w0.25",
+        "cycles": {
+          "error_pct": -2.7569771848063085,
+          "measured": 9407985.0,
+          "predicted": 9148609.0
+        },
+        "flash_bytes": {
+          "error_pct": -0.1891630776676867,
+          "measured": 53702.0,
+          "predicted": 53600.4156440309
+        },
+        "precision": "fp32",
+        "ram_bytes": {
+          "error_pct": 8.86653108614206,
+          "measured": 37876.0,
+          "predicted": 41234.28731418717
+        }
+      },
+      {
+        "arch": "L3_w0.25",
+        "cycles": {
+          "error_pct": 0.034734317142137705,
+          "measured": 3028705.0,
+          "predicted": 3029757.0
+        },
+        "flash_bytes": {
+          "error_pct": -5.59495041471868,
+          "measured": 35965.0,
+          "predicted": 33952.77608334643
+        },
+        "precision": "int8",
+        "ram_bytes": {
+          "error_pct": -12.993108029115064,
+          "measured": 15432.0,
+          "predicted": 13426.903568946964
+        }
+      },
+      {
+        "arch": "L3_w0.625",
+        "cycles": {
+          "error_pct": -4.20488053165704,
+          "measured": 38998825.0,
+          "predicted": 37358971.0
+        },
+        "flash_bytes": {
+          "error_pct": -0.05455269166813048,
+          "measured": 200878.0,
+          "predicted": 200768.4156440309
+        },
+        "precision": "fp32",
+        "ram_bytes": {
+          "error_pct": -12.064950421644461,
+          "measured": 114100.0,
+          "predicted": 100333.89156890367
+        }
+      },
+      {
+        "arch": "L3_w0.625",
+        "cycles": {
+          "error_pct": -0.8150894121964347,
+          "measured": 10240717.0,
+          "predicted": 10157246.0
+        },
+        "flash_bytes": {
+          "error_pct": -1.3378905186472556,
+          "measured": 73643.0,
+          "predicted": 72657.7372853526
+        },
+        "precision": "int8",
+        "ram_bytes": {
+          "error_pct": 6.448437727627443,
+          "measured": 19976.0,
+          "predicted": 21264.139920470858
+        }
+      },
+      {
+        "arch": "L3_w1",
+        "cycles": {
+          "error_pct": 1.4894619331578651,
+          "measured": 22439647.0,
+          "predicted": 22773877.0
+        },
+        "flash_bytes": {
+          "error_pct": 0.1866044555881352,
+          "measured": 137027.0,
+          "predicted": 137282.69848735875
+        },
+        "precision": "int8",
+        "ram_bytes": {
+          "error_pct": 11.448285355372057,
+          "measured": 26112.0,
+          "predicted": 29101.37627199475
+        }
+      },
+      {
+        "arch": "L3_w1",
+        "cycles": {
+          "error_pct": -1.0511342193368578,
+          "measured": 83850757.0,
+          "predicted": 82969373.0
+        },
+        "flash_bytes": {
+          "error_pct": -0.02425903223837178,
+          "measured": 451726.0,
+          "predicted": 451616.4156440309
+        },
+        "precision": "fp32",
+        "ram_bytes": {
+          "error_pct": 0.81029378295574,
+          "measured": 158152.0,
+          "predicted": 159433.49582362015
+        }
+      },
+      {
+        "arch": "L4_w0.25",
+        "cycles": {
+          "error_pct": -0.9624530445748292,
+          "measured": 11216755.0,
+          "predicted": 11108799.0
+        },
+        "flash_bytes": {
+          "error_pct": -0.248672430440533,
+          "measured": 144682.0,
+          "predicted": 144322.21575419002
+        },
+        "precision": "fp32",
+        "ram_bytes": {
+          "error_pct": 5.476351711787042,
+          "measured": 39316.0,
+          "predicted": 41469.08243900619
+        }
+      },
+      {
+        "arch": "L4_w0.25",
+        "cycles": {
+          "error_pct": -2.9761733054736172,
+          "measured": 3917245.0,
+          "predicted": 3800661.0
+        },
+        "flash_bytes": {
+          "error_pct": -2.6704590809029205,
+          "measured": 60093.0,
+          "predicted": 58488.24102451301
+        },
+        "precision": "int8",
+        "ram_bytes": {
+          "error_pct": -4.4651738814674875,
+          "measured": 16508.0,
+          "predicted": 15770.889095647348
+        }
+      },
+      {
+        "arch": "L4_w0.625",
+        "cycles": {
+          "error_pct": -0.26390566115959135,
+          "measured": 49640466.0,
+          "predicted": 49509462.0
+        },
+        "flash_bytes": {
+          "error_pct": -0.05281821493151595,
+          "measured": 703894.0,
+          "predicted": 703522.21575419
+        },
+        "precision": "fp32",
+        "ram_bytes": {
+          "error_pct": -12.081086570512056,
+          "measured": 114388.0,
+          "predicted": 100568.68669372267
+        }
+      },
+      {
+        "arch": "L4_w0.625",
+        "cycles": {
+          "error_pct": -4.282247582281951,
+          "measured": 15488572.0,
+          "predicted": 14825313.0
+        },
+        "flash_bytes": {
+          "error_pct": -0.5189162048680473,
+          "measured": 201535.0,
+          "predicted": 200489.20222651918
+        },
+        "precision": "int8",
+        "ram_bytes": {
+          "error_pct": 0.43188183057123464,
+          "measured": 24064.0,
+          "predicted": 24167.92804370866
+        }
+      },
+      {
+        "arch": "L4_w1",
+        "cycles": {
+          "error_pct": 3.0532575853505106,
+          "measured": 110632297.0,
+          "predicted": 114010186.0
+        },
+        "flash_bytes": {
+          "error_pct": -0.0218883309770046,
+          "measured": 1698550.0,
+          "predicted": 1698178.21575419
+        },
+        "precision": "fp32",
+        "ram_bytes": {
+          "error_pct": 0.7752404370355848,
+          "measured": 158440.0,
+          "predicted": 159668.2909484392
+        }
+      },
+      {
+        "arch": "L4_w1",
+        "cycles": {
+          "error_pct": -3.0021918018649396,
+          "measured": 35699851.0,
+          "predicted": 34628073.0
+        },
+        "flash_bytes": {
+          "error_pct": -0.062182198340399175,
+          "measured": 451635.0,
+          "predicted": 451354.1634285253
+        },
+        "precision": "int8",
+        "ram_bytes": {
+          "error_pct": -4.130455158472756,
+          "measured": 33968.0,
+          "predicted": 32564.966991769976
+        }
+      },
+      {
+        "arch": "L5_w0.25",
+        "cycles": {
+          "error_pct": 2.9049254140772085,
+          "measured": 11734587.0,
+          "predicted": 12075468.0
+        },
+        "flash_bytes": {
+          "error_pct": 0.184346706989591,
+          "measured": 291850.0,
+          "predicted": 292388.01586434914
+        },
+        "precision": "fp32",
+        "ram_bytes": {
+          "error_pct": 5.8689012079234715,
+          "measured": 39392.0,
+          "predicted": 41703.87756382521
+        }
+      },
+      {
+        "arch": "L5_w0.25",
+        "cycles": {
+          "error_pct": -3.6863741684729834,
+          "measured": 4548860.0,
+          "predicted": 4381172.0
+        },
+        "flash_bytes": {
+          "error_pct": 0.81775496083627,
+          "measured": 96570.0,
+          "predicted": 97359.70596567959
+        },
+        "precision": "int8",
+        "ram_bytes": {
+          "error_pct": 3.283375747504169,
+          "measured": 17268.0,
+          "predicted": 17834.97332407902
+        }
+      },
+      {
+        "arch": "L5_w0.625",
+        "cycles": {
+          "error_pct": 4.566481464508998,
+          "measured": 53125191.0,
+          "predicted": 55551143.0
+        },
+        "flash_bytes": {
+          "error_pct": 0.055501359473231204,
+          "measured": 1625214.0,
+          "predicted": 1626116.0158643492
+        },
+        "precision": "fp32",
+        "ram_bytes": {
+          "error_pct": -11.934335844858035,
+          "measured": 114464.0,
+          "predicted": 100803.4818185417
+        }
+      },
+      {
+        "arch": "L5_w0.625",
+        "cycles": {
+          "error_pct": 2.3095210757166473,
+          "measured": 18036943.0,
+          "predicted": 18453510.0
+        },
+        "flash_bytes": {
+          "error_pct": 0.22406668509913352,
+          "measured": 432312.0,
+          "predicted": 433280.66716768575
+        },
+        "precision": "int8",
+        "ram_bytes": {
+          "error_pct": -1.6265184971848368,
+          "measured": 26808.0,
+          "predicted": 26371.962921274688
+        }
+      },
+      {
+        "arch": "L5_w1",
+        "cycles": {
+          "error_pct": -4.6612842491009605,
+          "measured": 135807251.0,
+          "predicted": 129476889.0
+        },
+        "flash_bytes": {
+          "error_pct": 0.03159565612791404,
+          "measured": 4057570.0,
+          "predicted": 4058852.015864349
+        },
+        "precision": "fp32",
+        "ram_bytes": {
+          "error_pct": 0.875044836646266,
+          "measured": 158516.0,
+          "predicted": 159903.0860732582
+        }
+      },
+      {
+        "arch": "L5_w1",
+        "cycles": {
+          "error_pct": 4.105959881843901,
+          "measured": 42184192.0,
+          "predicted": 43916258.0
+        },
+        "flash_bytes": {
+          "error_pct": 0.1286795442304367,
+          "measured": 1042612.0,
+          "predicted": 1043953.6283696919
+        },
+        "precision": "int8",
+        "ram_bytes": {
+          "error_pct": -12.683960684166207,
+          "measured": 39980.0,
+          "predicted": 34908.95251847035
+        }
+      }
+    ],
+    "n": 24,
+    "summary": {
+      "cycles": {
+        "mae_pct": 2.393245503907738,
+        "max_pct": 4.6612842491009605,
+        "mean_signed_pct": -0.07808603658558308
+      },
+      "flash_bytes": {
+        "mae_pct": 1.1083136590368756,
+        "max_pct": 9.458296981955328,
+        "mean_signed_pct": -0.08109167992360702
+      },
+      "ram_bytes": {
+        "mae_pct": 6.8282863067283355,
+        "max_pct": 14.32233466291244,
+        "mean_signed_pct": -0.9761475383840498
+      }
+    }
+  }
+}

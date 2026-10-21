@@ -1,0 +1,32 @@
+{
+  "case": "acc80",
+  "front_composition": {
+    "L": {
+      "4": 1
+    },
+    "b": {
+      "8": 1
+    },
+    "f_idx": {
+      "4": 1
+    },
+    "pi": {
+      "below": 1
+    }
+  },
+  "grid_size": 12000,
+  "hypervolume": {
+    "A": 276.3892182339273,
+    "B": 613.0786170164604
+  },
+  "n_acceptable": 21,
+  "n_front": 1,
+  "rejected": {
+    "accuracy": 6000,
+    "flash": 2250,
+    "latency": 6943,
+    "memory_infeasible": 3150,
+    "miss_ratio": 3732,
+    "sram": 1800
+  }
+}

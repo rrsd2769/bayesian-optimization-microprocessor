@@ -1,0 +1,28 @@
+\begin{table*}[t]
+\centering
+\caption{Method Comparison}
+\label{tab:methods}
+\small
+
+\begin{tabular}{|l|c|c|c|c|c|c|}
+\hline
+\rowcolor{tblhead}
+\textbf{Method} & \textbf{HV$_A$ (\%)} & \textbf{HV$_B$ (\%)} & \textbf{Evals. to 90\%} & \textbf{IGD} & \textbf{$p$} & \textbf{$\delta$} \\
+\hline
+qNEHVI & 100.0 (100.0--100.0) & 100.0 & 28 & 0 & -- & -- \\
+\hline
+qNParEGO & 99.6 (96.4--100.0) & 99.7 & 40 & $1.288\times10^{-2}$ & $1.79\times10^{-3}$ & 0.75 \\
+\hline
+Sequential & 91.2 (91.2--91.2) & 70.3 & 65 & 0.150 & $9.79\times10^{-5}$ & 0.96 \\
+\hline
+MOTPE & 91.0 (88.7--91.0) & 70.2 & 54 & 0.151 & $1.17\times10^{-4}$ & 0.99 \\
+\hline
+Random & 74.8 (65.0--84.5) & 58.9 & never & 0.249 & $4.77\times10^{-6}$ & 0.99 \\
+\hline
+NSGA-II & 56.0 (0.0--74.1) & 28.6 & never & 0.338 & $1.17\times10^{-4}$ & 0.99 \\
+\hline
+\end{tabular}
+
+\vspace{2pt}
+{\footnotesize Median (IQR) over 20 seeds at 100 evaluations. HV is the percentage of the reference-front hypervolume at corner A, and at corner B in the next column. $p$ is the one-sided Wilcoxon test of qNEHVI against the method with Holm correction, and $\delta$ is Cliff's delta.}
+\end{table*}

@@ -1,0 +1,24 @@
+\begin{table}[t]
+\centering
+\caption{Accuracy Seed Noise (Points)}
+\label{tab:accuracy}
+\footnotesize
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{|l|c|c|c|}
+\hline
+\rowcolor{tblhead}
+\textbf{Bit-width} & \textbf{Architectures} & \textbf{Mean std} & \textbf{Max std} \\
+\hline
+$b = 32$ & 3 & 0.44 & 0.72 \\
+\hline
+$b = 16$ & 3 & 0.45 & 0.73 \\
+\hline
+$b = 8$ & 3 & 0.47 & 0.78 \\
+\hline
+$b = 4$ & 3 & 1.26 & 2.41 \\
+\hline
+\end{tabular}}
+
+\vspace{2pt}
+{\footnotesize Seed std over 3 architectures trained with 3 seeds. Mean drop from 32 to 4 bits 1.70 points (range 0.58 to 5.08) over 20 architectures.}
+\end{table}

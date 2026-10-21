@@ -1,0 +1,157 @@
+%=============================================================
+% RESULTS AND DISCUSSION
+%=============================================================
+
+\subsection{Reference Front and Coupling}
+\label{sec:front}
+\label{sec:sensitivity}
+Of the $12{,}000$ grid designs, $3{,}150$ break a memory limit and $378$
+($3.15\%$) meet every constraint. The latency limit fails $6{,}943$ designs,
+the deadline-miss limit $3{,}732$, and the accuracy floor $4{,}200$, with
+overlaps among them. The accuracy--energy front of the
+acceptable designs has four members, with accuracy from $0.7672$ to $0.8246$
+and energy from $9{,}610$ to $14{,}782\,\mu$J per inference. Corner A gives
+the front a hypervolume of $752.5$ and corner B $830.7$. The members use
+$L=4$ or $5$, weight precision $8$ (three designs) or $16$ (one), and no
+clock, priority, or time slice is shared by all four: the clock is
+$120$\,MHz for three designs and $180$\,MHz for one, the inference priority is
+\emph{below} for two and \emph{equal} for two, and the slices are $10.3$\,ms
+and $1.0$\,ms. No design with $b=32$ or $b=4$ is on the front. In this model
+the absence of $b=4$ follows from the accuracy loss at $4$ bits and from the
+int4 cycle estimate of $1.14$ times the int8 cycles, a literature value that
+was not measured (Fig.~\ref{fig:front} shows the front).
+
+\input{tables/table_front}
+
+\input{tables/table_sensitivity}
+
+Sensitivity runs recompute the front under $19$ cases, $12$ of them in
+the table: latency limits of
+$50$, $100$, and $200$\,ms against miss limits of $0$, $1$, and $5\%$, mean in
+place of $95$th-percentile latency, Stop-mode idle current, switch and tick
+costs scaled by $0.5$ and $2$, the int16 and int4 overheads scaled by $0.5$
+and $2$, and two generated task sets at $20$ and $50\%$ periodic utilization
+\cite{kim2021harmonic}. The front has $2$ to $6$ designs in every case, always
+with $L\in\{4,5\}$ and never with $b=32$. Int4 designs enter only when the
+int4 overhead is halved. Tightening the latency limit to $50$\,ms pushes the
+front to $b=8$ alone and shrinks the acceptable set to $125$ to $143$
+designs, and a $200$\,ms limit admits $60$\,MHz designs and up to $812$
+acceptable ones. With Stop-mode idle current, the front moves to
+$180$\,MHz alone, the race-to-idle result. The task set at $50\%$
+utilization leaves $99$ acceptable designs. The coupling between
+scheduler and network therefore shows in which clock and precision survive
+each constraint set, and it is stable in the layer count.
+
+\subsection{Method Comparison}
+\label{sec:comparison}
+\input{tables/table_methods}
+
+At $100$ evaluations, qNEHVI reaches a median of $100\%$ of the reference
+hypervolume at corner A, and $18$ of $20$ seeds end at exactly that value;
+one ends at $91.2\%$ and another at $99.95\%$ (Fig.~\ref{fig:convergence}). qNParEGO reaches
+$99.6\%$ (interquartile range $96.4$ to $100$), MOTPE $91.0\%$, the
+two-stage Sequential search $91.2\%$, Random $74.8\%$, and NSGA-II $56.0\%$.
+Corner B gives the same order, $100$, $99.7$, $70.2$, $70.3$, $58.9$, and
+$28.6\%$. The Friedman test rejects equal methods at both corners ($p=1.2\times10^{-16}$
+and $2.6\times10^{-15}$). qNEHVI is also the fastest to $90\%$, at a median of $28$ evaluations
+against $40$ for qNParEGO, $54$ for MOTPE, and $65$ for Sequential; Random and
+NSGA-II reach it in only one seed of $20$. Against Random, NSGA-II, MOTPE,
+and Sequential, the Holm-corrected one-sided $p$-values lie between
+$4.8\times10^{-6}$ and $1.2\times10^{-4}$, where the smallest value $20$ pairs can reach is
+$9.5\times10^{-7}$, and Cliff's $\delta$ is $0.96$ to $0.99$. Against
+qNParEGO, $p=1.8\times10^{-3}$ and $\delta=0.75$ at corner A, with a median
+difference of $0.2$ points: the two joint Bayesian methods are close, and the
+gap, although consistent, is small.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig_convergence.pdf}
+\caption{Hypervolume as a percentage of the reference front against
+evaluations, median over $20$ seeds with the interquartile range shaded.
+The dotted line marks $90\%$.}
+\label{fig:convergence}
+\end{figure}
+
+The share of evaluations that were not acceptable is $56\%$ for qNEHVI,
+$58\%$ for MOTPE, $57\%$ for Sequential, $66\%$ for qNParEGO, $79\%$ for
+NSGA-II, and $97\%$ for Random. With $378$ acceptable designs among
+$12{,}000$ and a front of four, the space is small for a model-based search, and the margin over
+Random is a statement about this problem; a larger space or a longer front
+could change it. NSGA-II ran with pymoo defaults and a population of $10$,
+and on some seeds it collapses to one architecture; its rank reflects that
+configuration and was not tuned.
+
+Proposal time separates the methods in wall-clock terms. The median total
+time spent proposing designs over $100$ evaluations is $23$ minutes for
+qNEHVI, $33$ for qNParEGO, and $58$ for Sequential, which is $14$, $20$, and $35$
+seconds per evaluation, on a fanless laptop. NSGA-II, MOTPE, and Random need
+under one second per run. One evaluation of a design costs milliseconds, so
+in this problem the Bayesian methods are slower overall; they pay off only
+where an evaluation costs more than their proposal time, as a training run
+or a board measurement would. In evaluations, qNEHVI reaches $90\%$ after
+$28$, which is $0.23\%$ of the grid, and ends at $100$ evaluations, which is
+$0.83\%$.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig_front.pdf}
+\caption{The reference front and the front found by the median seed of each
+method. Markers are offset sideways by a few $\mu$J so that coincident
+designs stay visible.}
+\label{fig:front}
+\end{figure}
+
+\subsection{Joint Against Sequential Search}
+\label{sec:sequential}
+Sequential stalls at $91.2\%$ at corner A and $70.3\%$ at corner B in all $20$
+seeds, so its interquartile range is zero. The cap is structural: its first stage fixes
+$180$\,MHz, a $10$\,ms slice, and equal priority, and three of the four
+front designs run at $120$\,MHz. No second-stage search can reach them,
+because the network was chosen under the wrong clock. Joint qNEHVI exceeds
+it by $8.8$ points at the median ($p=9.8\times10^{-5}$, $\delta=0.96$). The
+size of the cap depends on the values stage one fixes, and a different fixed
+clock would move it; the result shows that fixing the scheduler first can
+exclude the best designs, and not by how much in general.
+
+\subsection{Hardware Validation and Test Accuracy}
+\label{sec:hardware}
+\input{tables/table_hardware}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig_cycles.pdf}
+\caption{Predicted against measured inference cycles on the STM32F469I-DISCO
+at $180$\,MHz, for the $24$ calibration benchmarks and the eight held-out
+models.}
+\label{fig:cycles}
+\end{figure}
+
+Eight int8 networks that were not used in calibration ($L=2$ to $5$ at
+$w=0.4375$ and $0.8125$) were benchmarked on the same board. Their cycles are
+predicted with a mean absolute error of $4.8\%$ and at most $7.6\%$, against
+$2.4\%$ and $4.7\%$ on the $24$ calibration benchmarks. The error has a sign:
+$7$ of $8$ predictions are low, with a mean of $-4.5\%$ (the calibration set
+has $-0.1\%$), so predicted cycles run a few percent below the board. Flash
+errs by $1.6\%$ on average and $6.3\%$ at most, and RAM by $6.6\%$ and $8.6\%$.
+The four front designs were also evaluated once on the CIFAR-10 test split
+of $10{,}000$ images. Test accuracy differs from the table's validation
+accuracy by $+0.63$, $-0.17$, $-0.86$, and $-1.08$ points, a mean of $-0.37$. A negative mean is expected when the checkpoint is chosen
+on validation accuracy. For comparison, the seed standard deviation is between
+$0.44$ and $0.47$ points at $8$, $16$, and $32$ bits.
+The int16 and int4 cycle ratios, and the memory of every int16 and int4
+design, were not run on silicon, which includes the one front design at
+$b=16$.
+
+\subsection{Limitations}
+\label{sec:limitations}
+Energy comes from datasheet currents and was not measured, and the run
+currents are typical values for benchmark code. Cycles and memory were
+measured on an F469 board and applied to an F446 target of the same core family.
+Table accuracy is one training seed per architecture, with a seed noise of
+$0.44$ to $1.26$ points that is larger at int4. The workload is a
+synthetic task set with an assumed tick cost, and the front lies on a grid
+of $12{,}000$ designs that holds ten values of $\tau$, whereas the searches
+treat it as continuous. The two Ax methods receive corner A as objective thresholds and the other
+methods use no reference point, which may favor the Ax methods; corner B
+gives the same order but uses the same thresholds. Twenty seeds bound each
+$p$-value from below at about $10^{-6}$.

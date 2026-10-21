@@ -1,0 +1,20 @@
+\begin{table}[t]
+\centering
+\caption{Hardware Validation Error (\%)}
+\label{tab:hardware}
+\footnotesize
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{|l|c|c|c|c|}
+\hline
+\rowcolor{tblhead}
+\textbf{Models} & \textbf{n} & \textbf{Cycles} & \textbf{Flash} & \textbf{RAM} \\
+\hline
+Held out & 8 & 4.76 (7.60) & 1.62 (6.30) & 6.64 (8.55) \\
+\hline
+Calibration & 24 & 2.39 (4.66) & 1.11 (9.46) & 6.83 (14.32) \\
+\hline
+\end{tabular}}
+
+\vspace{2pt}
+{\footnotesize Mean absolute error in percent (maximum in brackets) of predicted against measured, STM32F469I-DISCO at 180 MHz.}
+\end{table}

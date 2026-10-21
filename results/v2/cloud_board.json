@@ -1,0 +1,9 @@
+{
+  "board": "STM32F469I-DISCO",
+  "clock_mhz": 180,
+  "core": "Arm Cortex-M4",
+  "internal_flash_kb": 2048,
+  "internal_ram_kb": 384,
+  "note": "No F446 board in the farm; the F469 is the same F4 family, same Cortex-M4F core and 180 MHz. Cloud tool: ST Edge AI Core v4.0.1-20581, target stm32f4, optimization balanced.",
+  "source": "ST Edge AI Developer Cloud board farm list, 2026-10-11"
+}

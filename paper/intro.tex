@@ -1,0 +1,52 @@
+%=============================================================
+% INTRODUCTION
+%=============================================================
+
+A microcontroller that runs a convolutional network usually has no fan,
+draws on a coin cell or a harvested supply, and shares its single core
+with the other tasks of a real-time operating system
+(RTOS)~\cite{tsoukas2024tinyml,ray2022tinyml}. Energy per inference limits
+such a device more than anything else, and two groups of decisions set it.
+Depth, channel width, and weight precision fix how many
+multiply--accumulate (MAC) operations the network needs and how much memory
+it occupies. The time slice, the priority policy, and the clock frequency
+then fix how quickly, and at what power, the RTOS carries those operations
+out. The groups interact: a lower clock saves power but stretches every
+inference, and a smaller network frees latency headroom that a lower clock
+can spend.
+
+Tool flows usually tune one group while holding the other fixed. Neural
+architecture search~\cite{ren2022nas}, in its hardware-aware form,
+co-explores network topology against a given accelerator, compiler, or
+device~\cite{chitty2023hwnas,jiang2020coexploration}, and on
+microcontrollers it can treat memory and latency as constraints~\cite{king2025mcu}.
+MCUNet co-designs the network with its inference library but leaves the RTOS
+scheduler and the core clock out of the search~\cite{lin2023tinyml}.
+Co-search of the network with a compiler-level scheduling policy
+exists~\cite{chen2023chanas}; the RTOS parameters of the core, which are
+time slice, priority, and clock, are outside it. Energy-aware scheduling has
+been studied for FreeRTOS-based systems~\cite{oliveira2023freertos}, and
+learned frequency scaling has been applied to inference
+workloads~\cite{zhang2024dvfo}; there, the network is an input to the problem
+and is never searched.
+
+Bayesian optimization (BO) fits problems where each evaluation is costly and
+no gradient is available~\cite{wang2023bo}. Multi-objective BO has been
+applied to tinyML network search~\cite{deutel2025mobo}, and hypervolume-based
+acquisition functions have been run with constraints and on discrete design
+spaces~\cite{low2024constrained,mamun2025mobo}. None of the studies cited here
+puts the scheduler parameters in the same search space as the architecture,
+or tests whether searching them together beats searching them in turn.
+
+This study does both. Network architecture, weight precision, and scheduler
+configuration form one six-variable problem, accuracy against energy per
+inference under accuracy, latency, deadline-miss, and memory constraints.
+Accuracy comes from trained and quantized networks, cycles and memory from a
+model calibrated on an STM32 board, and scheduling from a deterministic
+simulation of a fixed-priority RTOS. Full enumeration of $12{,}000$ designs
+supplies the reference front, and six search methods are scored against it
+over 20 seeds. The contributions are the joint formulation with its
+calibrated evaluation, a comparison that includes a two-stage ablation in
+which the scheduler is fixed before the network is searched, and a
+held-out check of the cost models on eight networks that were not used to
+calibrate them.

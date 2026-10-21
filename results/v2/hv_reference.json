@@ -1,0 +1,11 @@
+{
+  "A": {
+    "accuracy": 0.7,
+    "energy_uj": 17000
+  },
+  "B": {
+    "accuracy": 0.75,
+    "energy_uj": 23000
+  },
+  "worst_acceptable_energy_uj": 15116.056940042665
+}

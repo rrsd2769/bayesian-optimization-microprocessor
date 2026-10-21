@@ -1,0 +1,32 @@
+\begin{table}[t]
+\centering
+\caption{Calibration Quality}
+\label{tab:calibration}
+\footnotesize
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{|l|c|c|c|c|}
+\hline
+\rowcolor{tblhead}
+\textbf{Quantity} & \textbf{n} & \textbf{$R^2$} & \textbf{LOO mean (\%)} & \textbf{LOO max (\%)} \\
+\hline
+Cycles, int8 & 12 & 0.997 & 3.3 & 6.8 \\
+\hline
+Cycles, fp32 & 12 & 0.997 & 2.9 & 5.9 \\
+\hline
+Kernel flash, int8 & 12 & 0.728 & 6.7 & 25.2 \\
+\hline
+Kernel flash, fp32 & 12 & 0.711 & 3.5 & 5.0 \\
+\hline
+Kernel RAM, int8 & 12 & 0.817 & 6.9 & 11.0 \\
+\hline
+Kernel RAM, fp32 & 12 & 0.947 & 4.2 & 5.6 \\
+\hline
+Activations, int8 & 12 & 0.928 & 10.5 & 22.6 \\
+\hline
+Activations, fp32 & 12 & 0.977 & 7.2 & 13.1 \\
+\hline
+\end{tabular}}
+
+\vspace{2pt}
+{\footnotesize Leave-one-architecture-out (LOO) relative error of the fits to the Cloud benchmarks.}
+\end{table}

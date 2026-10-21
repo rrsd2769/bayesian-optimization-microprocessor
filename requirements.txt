@@ -1,4 +1,5 @@
 about-time==4.2.1
+alembic==1.20.0
 alive-progress==3.3.0
 asttokens==3.0.1
 autograd==1.8.0
@@ -6,6 +7,7 @@ ax-platform==1.2.4
 botorch==0.17.2
 cffi==2.0.0
 cma==4.4.4
+colorlog==6.12.0
 comm==0.2.3
 contourpy==1.3.3
 cycler==0.12.1
@@ -13,11 +15,13 @@ decorator==5.3.1
 Deprecated==1.3.1
 executing==2.2.1
 filelock==3.29.0
+flatbuffers==25.12.19
 fonttools==4.63.0
 fsspec==2026.4.0
 gpytorch==1.15.2
 graphemeu==0.7.2
 graphviz==0.21
+iniconfig==2.3.1
 ipython==9.14.0
 ipython_pygments_lexers==1.1.1
 ipywidgets==8.1.8
@@ -27,10 +31,12 @@ joblib==1.5.3
 jupyterlab_widgets==3.0.16
 kiwisolver==1.5.0
 linear_operator==0.6.1
+Mako==1.4.3
 Markdown==3.10.2
 MarkupSafe==3.0.3
-matplotlib==3.10.9
 matplotlib-inline==0.2.2
+matplotlib==3.10.9
+ml_dtypes==0.6.0
 moocore==0.3.1
 mpmath==1.3.0
 multipledispatch==1.0.0
@@ -38,6 +44,9 @@ mypy_extensions==1.1.0
 narwhals==2.22.0
 networkx==3.6.1
 numpy==2.4.6
+onnx==1.23.2
+onnxruntime==1.31.0
+optuna==5.0.0
 opt_einsum==3.4.0
 packaging==26.2
 pandas==3.0.3
@@ -46,7 +55,9 @@ pexpect==4.9.0
 pillow==12.2.0
 platformdirs==4.10.0
 plotly==6.7.0
+pluggy==1.6.0
 prompt_toolkit==3.0.52
+protobuf==7.36.2
 psutil==7.2.2
 ptyprocess==0.7.0
 pure_eval==0.2.3
@@ -57,12 +68,14 @@ pyparsing==3.3.2
 pyre-extensions==0.0.32
 pyro-api==0.1.2
 pyro-ppl==1.9.1
+pytest==9.1.1
 python-dateutil==2.9.0.post0
 scikit-learn==1.8.0
 scipy==1.17.1
 setuptools==81.0.0
 simpy==4.1.2
 six==1.17.0
+SQLAlchemy==2.1.4
 stack-data==0.6.3
 sympy==1.14.0
 threadpoolctl==3.6.0
